@@ -1,17 +1,16 @@
 #!/usr/bin/env python3
-"""Build `runtime/` from upstream sources instead of downloading the runtime pack.
+"""从上游自行构建 `runtime/`，而不下载便携运行库包。
 
-Use this when you would rather not redistribute the portable runtime, or when
-your interpreter is not the packaged Windows x64 CPython 3.12.
+适用场景：不想承担便携运行库的再分发责任，或你的解释器不是打包用的
+Windows x64 CPython 3.12。
 
-  python tools/build_runtime.py                 # install deps for THIS interpreter into runtime/python
-  python tools/build_runtime.py --ffmpeg C:\\tools\\ffmpeg\\bin   # copy ffmpeg/ffprobe from a folder
-  python tools/build_runtime.py --ffmpeg https://.../ffmpeg.zip  # or from an archive
-  python tools/build_runtime.py --cross 3.12    # fetch win_amd64 cp312 wheels without running them
+  python tools/build_runtime.py                  # 为当前解释器安装依赖到 runtime/python
+  python tools/build_runtime.py --ffmpeg C:\\tools\\ffmpeg\\bin   # 从目录复制 ffmpeg/ffprobe
+  python tools/build_runtime.py --ffmpeg https://.../ffmpeg.zip  # 或从压缩包
+  python tools/build_runtime.py --cross 3.12     # 只为 3.12 取 wheel，不在本机导入
 
-`runtime/bin` is what the renderers put on PATH, so FFmpeg and FFprobe must end
-up there. Without them the renderers fall back to whatever `ffmpeg` your PATH
-resolves to, which may differ in encoding defaults from the tested build.
+渲染器会把 `runtime/bin` 放进 PATH，所以 FFmpeg 与 FFprobe 必须落到那里。
+缺了它们，渲染器会退回使用系统 PATH 里的 ffmpeg，编码默认值可能与实测版本不同。
 """
 from __future__ import annotations
 
@@ -25,8 +24,18 @@ import urllib.request
 import zipfile
 from pathlib import Path
 
-# ffmpeg-9.0.1-full_build is what the published runtime pack carries.
-FFMPEG_HINT = "https://www.gyan.dev/ffmpeg/builds/  (ffmpeg-release-full.7z / -full-shared.zip)"
+# 官方发布的 runtime 包里带的是 ffmpeg-9.0.1-full_build。
+FFMPEG_HINT = "https://www.gyan.dev/ffmpeg/builds/  （ffmpeg-release-full.7z / -full-shared.zip）"
+
+
+def init_stdout() -> None:
+    """面向控制台时用系统编码；被重定向或接管道时改用 UTF-8，避免日志乱码。"""
+    try:
+        if not sys.stdout.isatty() and hasattr(sys.stdout, "reconfigure"):
+            sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+            sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
 
 
 def run(cmd: list[str]) -> int:
@@ -41,7 +50,7 @@ def install_deps(repo: Path, cross: str | None) -> int:
     base = [sys.executable, "-m", "pip", "install", "--upgrade", "--target", str(target), "-r", str(req)]
     if cross:
         base += ["--python-version", cross, "--implementation", "cp", "--platform", "win_amd64", "--only-binary=:all:"]
-        print(f"  cross-installing wheels for CPython {cross} win_amd64 (they will not import in this interpreter)")
+        print(f"  正在为 CPython {cross} win_amd64 获取 wheel（这些包在当前解释器里无法导入）")
     return run(base)
 
 
@@ -56,14 +65,14 @@ def copy_ffmpeg(repo: Path, source: str) -> int:
             candidate = folder / name
             if candidate.is_file():
                 shutil.copy2(candidate, target / name)
-                print(f"  copied {candidate.name} -> {target}")
+                print(f"  已复制 {candidate.name} -> {target}")
                 found += 1
         return found
 
     if source.startswith(("http://", "https://")):
         with tempfile.TemporaryDirectory() as tmp:
             archive = Path(tmp) / "ffmpeg-download"
-            print(f"  downloading {source}")
+            print(f"  下载 {source}")
             urllib.request.urlretrieve(source, archive)
             if zipfile.is_zipfile(archive):
                 with zipfile.ZipFile(archive) as zf:
@@ -73,60 +82,61 @@ def copy_ffmpeg(repo: Path, source: str) -> int:
                     if folder.is_dir():
                         found += take(folder)
             else:
-                print("  ! only .zip archives are unpacked automatically; extract 7z manually and pass the folder")
+                print("  ! 只自动解压 .zip；7z 请手动解开后把目录传给 --ffmpeg")
                 return 2
             if not found:
-                print("  ! no ffmpeg/ffprobe found inside the archive")
+                print("  ! 压缩包里没有找到 ffmpeg/ffprobe")
                 return 2
         return 0
 
     if source.lower() == "path":
         which = shutil.which("ffmpeg")
         if not which:
-            print("  ! ffmpeg is not on PATH")
+            print("  ! PATH 里没有 ffmpeg")
             return 2
         return take(Path(which).parent)
 
     folder = Path(source)
     if not folder.is_dir():
-        print(f"  ! not a folder: {folder}")
+        print(f"  ! 不是目录：{folder}")
         return 2
     return 0 if take(folder) else 2
 
 
 def main() -> int:
+    init_stdout()
     here = Path(__file__).resolve().parent
     repo = here.parent
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--repo", default=str(repo), help="skill root to build into (default: this repository)")
-    ap.add_argument("--cross", default=None, help="fetch wheels for another CPython, e.g. 3.12")
-    ap.add_argument("--ffmpeg", default=None, help="folder, zip URL, or 'path' to copy ffmpeg/ffprobe from")
-    ap.add_argument("--skip-deps", action="store_true")
+    ap.add_argument("--repo", default=str(repo), help="要构建到哪个 skill 根目录（默认为本仓库）")
+    ap.add_argument("--cross", default=None, help="为其他 CPython 版本取 wheel，例如 3.12")
+    ap.add_argument("--ffmpeg", default=None, help="目录、zip 下载地址，或 'path'（从系统 PATH 复制）")
+    ap.add_argument("--skip-deps", action="store_true", help="跳过 pip 安装")
     args = ap.parse_args()
 
     root = Path(args.repo).resolve()
-    print(f"building runtime in {root}")
+    print(f"构建 runtime：{root}")
 
     if not args.skip_deps:
         version = sys.version_info
-        print(f"  interpreter: {version.major}.{version.minor}.{version.micro} ({sys.platform})")
+        print(f"  当前解释器：{version.major}.{version.minor}.{version.micro}（{sys.platform}）")
         if cross := args.cross:
-            print(f"  cross target: {cross}")
+            print(f"  交叉目标：{cross}")
         elif sys.platform != "win32" or version[:2] != (3, 12):
-            print("  note: the published scripts target Windows x64 CPython 3.12;"
-                  " wheels built for this interpreter may not match that runtime.")
+            print("  注意：发布的脚本针对 Windows x64 CPython 3.12；"
+                  "为当前解释器构建的 wheel 可能与那个运行库不一致。")
         if install_deps(root, args.cross) != 0:
-            print("  ! pip failed; runtime/python is incomplete", file=sys.stderr)
+            print("  ! pip 失败；runtime/python 不完整", file=sys.stderr)
             return 1
 
     if args.ffmpeg:
         if copy_ffmpeg(root, args.ffmpeg) != 0:
             return 1
     else:
-        print("  no --ffmpeg given; runtime/bin left alone.")
-        print(f"  the tested build is ffmpeg 9.0.1-full_build: {FFMPEG_HINT}")
+        print("  未提供 --ffmpeg，runtime/bin 保持原样。")
+        print(f"  实测版本为 ffmpeg 9.0.1-full_build：{FFMPEG_HINT}")
 
-    print("\ndone. Verify with:  python single/scripts/launch.py <project> info")
+    print("\n完成。可这样验证：  python single/scripts/launch.py <项目目录> info")
     return 0
 
 

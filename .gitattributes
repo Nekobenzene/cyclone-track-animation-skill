@@ -1,17 +1,22 @@
-# Keep the checked-out text byte-identical to what bin/typhoon/source_manifest.json
-# records: those hashes were taken on LF sources, so force LF everywhere instead
-# of letting core.autocrlf rewrite them on Windows checkouts.
+# 这是 Windows 工具的源码：作者原始文件绝大多数是 CRLF，且
+# bin/typhoon/source_manifest.json 记录的哈希就是按原始字节算的。
+# 这里固定 eol：仓库内存 LF（便于 diff），检出时还原成与作者一致的字节，
+# 这样任何平台克隆下来都能通过 source_manifest.json 的哈希校验。
 * text=auto
-*.py   text eol=lf
-*.md   text eol=lf
-*.json text eol=lf
-*.yaml text eol=lf
-*.yml  text eol=lf
-*.txt  text eol=lf
-*.cfg  text eol=lf
 
-# Release archives and installed packs are never tracked anyway; make sure git
-# also treats them as binary so it never attempts a text diff.
+*.py   text eol=crlf
+*.md   text eol=crlf
+*.json text eol=crlf
+*.yaml text eol=crlf
+*.yml  text eol=crlf
+*.txt  text eol=crlf
+*.cfg  text eol=crlf
+
+# 作者原始文件里这两个是 LF，单独声明以免被统一成 CRLF。
+single/scripts/check_audio_intervals.py text eol=lf
+season/examples/2020.md                text eol=lf
+
+# Release 压缩包与安装进来的素材不进版本库；同时声明为二进制，避免 git 尝试文本 diff。
 *.zip  binary
 *.mp4  binary
 *.png  binary

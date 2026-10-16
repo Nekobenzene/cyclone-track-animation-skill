@@ -1,15 +1,14 @@
 #!/usr/bin/env python3
-"""Split an installed skill into release packs and write assets.manifest.json.
+"""把已安装的 skill 切分成若干发布包，并生成 assets.manifest.json。
 
-  python tools/pack_assets.py --skill <installed skill root> [--out dist] [--tag assets-v1]
+  python tools/pack_assets.py --skill <已安装的 skill 根目录> [--out dist] [--tag assets-v1]
 
-The script only reads the skill: it writes zips and the manifest, and never
-touches the source tree. Every zip stores skill-relative paths, so extracting a
-pack at the skill root always reproduces the exact layout the renderers expect
-(`assets/SMCY1.3/...`, `runtime/...`, `bin/typhoon/...`).
+本脚本**只读**源目录：写出 zip 和清单，不会改动被读取的 skill。
+每个 zip 内部保存的都是 skill 相对路径，因此在 skill 根目录解压即可还原
+渲染器期望的结构（`assets/SMCY1.3/...`、`runtime/...`、`bin/typhoon/...`）。
 
-Coverage is enforced: any file under the packed trees that no pack claims is
-reported and makes the run fail, so a new asset cannot silently be left behind.
+覆盖检查是强制的：被打包目录下任何文件如果不属于任何包，脚本会报错退出并列出路径，
+因此新增素材不会被悄悄漏掉。
 """
 from __future__ import annotations
 
@@ -22,7 +21,7 @@ import time
 import zipfile
 from pathlib import Path
 
-# Pack -> skill-relative files/directories it owns. Order matters only for the report.
+# 包 -> 它拥有的 skill 相对文件/目录。顺序只影响报告输出。
 PACKS = {
     "map": ["assets/SMCY1.3/map/basins.json", "assets/SMCY1.3/map/basins"],
     "icons": ["assets/SMCY1.3/mainicon", "assets/SMCY1.3/summary"],
@@ -51,38 +50,47 @@ PACKS = {
     "exe": ["bin/typhoon"],
 }
 
-# Packs installed by `fetch_assets.py` with no arguments: everything a
-# source-mode render needs. The rest are opt-in.
+# `fetch_assets.py` 不带参数时安装的包：跑源码渲染所需的一切；其余按需选择。
 DEFAULT_PACKS = ["map", "icons", "fx", "font", "runtime"]
 OPTIONAL_PACKS = ["exe", "geo", "legacy"]
 
 DESCRIPTIONS = {
-    "map": "basin map sheets and basins.json (renderer base maps)",
-    "icons": "category icon art and summary banners",
-    "fx": "landfall, particle, GUI, ACE rulers, sound and intensity tables",
-    "font": "Saira and Source Han Sans SC",
-    "legacy": "superseded map sheets and the unused timeline clips (not needed to render)",
-    "geo": "optional GeoNames / outline preprocessing data",
-    "runtime": "portable CPython 3.12 libraries and FFmpeg for source-mode rendering",
-    "exe": "frozen typhoon.exe with its own bundled Python",
+    "map": "底图 map/basins/ 与 basins.json（渲染底图）",
+    "icons": "等级图标与概要条",
+    "fx": "登陆特效、粒子、GUI、ACE 标尺、音效与强度表",
+    "font": "Saira 与思源黑体",
+    "legacy": "已废弃的地图纸张与未被引用的时间轴影片（渲染不需要）",
+    "geo": "可选的地理预处理数据（GeoNames 与国界轮廓）",
+    "runtime": "便携 CPython 3.12 库与 FFmpeg（跑源码必需）",
+    "exe": "打包好的 typhoon.exe，自带 Python 解释器",
 }
 
-# Media is already compressed; deflating it costs CPU for nothing.
+# 媒体本身已压缩，再 deflate 只是白费 CPU。
 STORE_EXT = {
     ".mp4", ".mov", ".png", ".jpg", ".jpeg", ".gif", ".webp", ".tif", ".tiff",
     ".ogg", ".mp3", ".wav", ".zip", ".gz", ".7z", ".rar", ".otf", ".ttf", ".ttc",
     ".woff", ".woff2", ".eot", ".pyd", ".dll", ".exe", ".lib", ".npy", ".npz",
     ".xlsx", ".pkl", ".fits",
 }
-STORE_MIN = 4 * 1024 * 1024  # anything this big is stored even if not listed above
+STORE_MIN = 4 * 1024 * 1024  # 超过此大小一律 STORED，即使不在上面的名单里
 
 SKIP_DIRS = {"__pycache__", ".git"}
-# .lnk are Windows shortcuts to the author's own machine and are useless to users.
+# .lnk 是指向作者本机的 Windows 快捷方式，对使用者无用。
 SKIP_SUFFIX = {".pyc", ".pyo", ".lnk"}
 SKIP_NAMES = {"desktop.ini", "Thumbs.db", ".DS_Store"}
 
-# Small files that live inside the packed trees but belong to git, not to a pack.
+# 位于被打包目录内、但属于 git 而非任何包的小文件。
 GIT_TRACKED = {"runtime/platform.json", "assets.manifest.json"}
+
+
+def init_stdout() -> None:
+    """面向控制台时用系统编码；被重定向或接管道时改用 UTF-8，避免日志乱码。"""
+    try:
+        if not sys.stdout.isatty() and hasattr(sys.stdout, "reconfigure"):
+            sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+            sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
 
 
 def sha256_file(path: Path, chunk: int = 1 << 22) -> str:
@@ -97,7 +105,7 @@ def sha256_file(path: Path, chunk: int = 1 << 22) -> str:
 
 
 def walk(root: Path, rel: str):
-    """Yield files under a skill-relative file-or-directory spec."""
+    """列出某个 skill 相对文件/目录下的文件。"""
     target = root / rel
     if not target.exists():
         return
@@ -113,7 +121,7 @@ def walk(root: Path, rel: str):
 
 
 def collect(root: Path):
-    """{pack: [rel paths]}, plus the orphan check over the packed trees."""
+    """返回 ({包: [相对路径]}, 孤儿文件列表)。"""
     packed: dict[str, list[str]] = {}
     seen: dict[str, str] = {}
     for pack, specs in PACKS.items():
@@ -121,13 +129,13 @@ def collect(root: Path):
         for spec in specs:
             for rel in walk(root, spec):
                 if rel in seen:
-                    print(f"  ! {rel} claimed by both {seen[rel]} and {pack}", file=sys.stderr)
+                    print(f"  ! {rel} 同时被 {seen[rel]} 和 {pack} 认领", file=sys.stderr)
                     continue
                 seen[rel] = pack
                 files.append(rel)
         packed[pack] = sorted(files)
 
-    # Orphans: files under the asset/runtime trees that no pack claims.
+    # 孤儿：位于素材/运行库目录下、但没有任何包认领的文件
     orphans = []
     for top in ("assets/SMCY1.3", "assets/geo", "runtime", "bin/typhoon"):
         base = root / top
@@ -177,16 +185,17 @@ def human(n: float) -> str:
 
 
 def main() -> int:
+    init_stdout()
     here = Path(__file__).resolve().parent
     repo = here.parent
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--skill", default=str(repo), help="installed skill root to read (default: this repository)")
-    ap.add_argument("--out", default=str(repo / "dist"), help="where to write the zips (default: <repo>/dist)")
-    ap.add_argument("--manifest", default=str(repo / "assets.manifest.json"), help="manifest path to write")
-    ap.add_argument("--repo", default="Nekobenzene/cyclone-track-animation-skill", help="owner/name used to build release URLs")
-    ap.add_argument("--tag", default="assets-v1", help="release tag the manifest points at")
-    ap.add_argument("--only", default="", help="comma-separated pack filter")
-    ap.add_argument("--compress", default="1", help="1 = deflate small files, 0 = store everything")
+    ap.add_argument("--skill", default=str(repo), help="要读取的已安装 skill 根目录（默认为本仓库）")
+    ap.add_argument("--out", default=str(repo / "dist"), help="zip 输出目录（默认 <仓库>/dist）")
+    ap.add_argument("--manifest", default=str(repo / "assets.manifest.json"), help="清单写入路径")
+    ap.add_argument("--repo", default="Nekobenzene/cyclone-track-animation-skill", help="用于拼下载地址的 owner/name")
+    ap.add_argument("--tag", default="assets-v1", help="清单指向的 Release 标签")
+    ap.add_argument("--only", default="", help="逗号分隔的包名，只处理这些")
+    ap.add_argument("--compress", default="1", help="1 = 小文件用 deflate，0 = 全部 STORED")
     args = ap.parse_args()
 
     root = Path(args.skill).resolve()
@@ -195,16 +204,16 @@ def main() -> int:
 
     for required in ("single/scripts", "season/scripts", "assets/SMCY1.3"):
         if not (root / required).exists():
-            print(f"error: {root} does not look like the skill root (missing {required})", file=sys.stderr)
+            print(f"错误：{root} 看起来不是 skill 根目录（缺少 {required}）", file=sys.stderr)
             return 2
 
     wanted = [p.strip() for p in args.only.split(",") if p.strip()] or list(PACKS)
     packed, orphans = collect(root)
     if orphans:
-        print("error: these files are under a packed tree but no pack claims them:", file=sys.stderr)
+        print("错误：以下文件位于被打包目录内，但没有任何包认领：", file=sys.stderr)
         for rel in orphans:
             print(f"  {rel}", file=sys.stderr)
-        print("Add them to PACKS in tools/pack_assets.py and re-run.", file=sys.stderr)
+        print("请把它们加入 tools/pack_assets.py 的 PACKS 后重跑。", file=sys.stderr)
         return 3
 
     manifest = {
@@ -222,10 +231,10 @@ def main() -> int:
     for pack in wanted:
         files = packed.get(pack) or []
         if not files:
-            print(f"  {pack}: no files found under {root} - skipped")
+            print(f"  {pack}：在 {root} 下没有找到文件，跳过")
             continue
         size = sum((root / rel).stat().st_size for rel in files)
-        print(f"  {pack}: {len(files)} files, {human(size)} - hashing")
+        print(f"  {pack}：{len(files)} 个文件，{human(size)}，正在计算哈希")
         entries = [
             {"path": rel, "bytes": (root / rel).stat().st_size, "sha256": sha256_file(root / rel)}
             for rel in files
@@ -234,10 +243,10 @@ def main() -> int:
         if pack == "geo":
             zip_name = "geo-optional.zip"
         zip_path = out / zip_name
-        print(f"  {pack}: writing {zip_name}")
+        print(f"  {pack}：写出 {zip_name}")
         stored, deflated = write_zip(root, zip_path, files, compress=args.compress != "0")
         zbytes = zip_path.stat().st_size
-        print(f"  {pack}: {zip_name} {human(zbytes)} (stored {stored}, deflated {deflated})")
+        print(f"  {pack}：{zip_name} {human(zbytes)}（STORED {stored} 个，DEFLATE {deflated} 个）")
         manifest["packs"][pack] = {
             "file": zip_name,
             "bytes": zbytes,
@@ -260,9 +269,9 @@ def main() -> int:
         "default_file_count": sum(p["file_count"] for p in manifest["packs"].values() if p["default"]),
     }
     Path(args.manifest).write_text(json.dumps(manifest, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
-    print(f"\nmanifest: {args.manifest}")
-    print(f"packs: {manifest['totals']['packs']}  files: {grand_files}  raw: {human(grand_bytes)}  zipped: {human(manifest['totals']['zip_bytes'])}")
-    print(f"default install: {manifest['totals']['default_file_count']} files, {human(manifest['totals']['default_zip_bytes'])} to download")
+    print(f"\n清单：{args.manifest}")
+    print(f"包数 {manifest['totals']['packs']}，文件 {grand_files}，原始 {human(grand_bytes)}，压缩后 {human(manifest['totals']['zip_bytes'])}")
+    print(f"默认安装：{manifest['totals']['default_file_count']} 个文件，需下载 {human(manifest['totals']['default_zip_bytes'])}")
     return 0
 
 

@@ -13,47 +13,35 @@
 
 ## 0. 从 GitHub 取得素材（先做这一步）
 
-本仓库只跟踪**代码、文档和工具**。素材、字体、便携运行库和可执行程序体积过大，改为
-以 **GitHub Release 附件**发布，不进入 git 历史。克隆之后先装素材，否则渲染器找不到地图和字体：
+本仓库只跟踪**代码、文档和工具**。素材、字体、便携运行库和可执行程序体积过大
+（共 2.4 GB，其中 4 个文件超过 GitHub 的 100 MB 单文件限制），改为以
+**GitHub Release 附件**发布，不进入 git 历史。克隆之后先装素材，否则渲染器找不到地图和字体：
 
 ```powershell
 git clone https://github.com/Nekobenzene/cyclone-track-animation-skill
 cd cyclone-track-animation-skill
-python tools\fetch_assets.py --list          # 看有哪些包、多大
-python tools\fetch_assets.py                 # 默认包（约 1.4 GB）
+python tools\fetch_assets.py --list          # 看有哪些包、各多大
+python tools\fetch_assets.py                 # 默认包，约 1.4 GB
 ```
 
-`fetch_assets.py` 先校验 zip 的 SHA-256，再校验解包后每一个文件，全部通过才落盘，
-所以中断或网络抖动都不会留下半装的 skill；重复运行会跳过已就绪的文件，也可以当修复命令用。
-
-| 包 | 内容 | 默认安装 |
-|---|---|---|
-| `map` | `map/basins/` 底图与 `basins.json` | ✅ |
-| `icons` | 等级图标、概要条 | ✅ |
-| `fx` | 登陆/粒子/GUI/ACE/音效/强度表 | ✅ |
-| `font` | Saira 与思源黑体 | ✅ |
-| `runtime` | 便携 CPython 3.12 库 + FFmpeg | ✅ |
-| `exe` | 打包好的 `typhoon.exe`（含自带 Python） | 可选 |
-| `geo` | 备用地理数据（正常渲染不加载） | 可选 |
-| `legacy` | 已废弃的地图纸张与未被引用的时间轴影片 | 可选 |
-
-常用变体：
+装完验一遍：
 
 ```powershell
-python tools\fetch_assets.py --pack map,icons,fx,font        # 不装便携运行库，用系统 Python 依赖
-python tools\fetch_assets.py --pack map,icons,fx,font,runtime,exe   # 只用编译版 exe
-python tools\fetch_assets.py --all                           # 含 legacy / geo
-python tools\fetch_assets.py --base D:\mirror\assets-v1      # 离线或镜像目录
-python tools\fetch_assets.py --verify-only                   # 只校验已装文件
+python tools\fetch_assets.py --verify-only   # 全量哈希复核
+bin\typhoon\typhoon.exe check                # 期望 {"ok": true, ...}
 ```
+
+默认会装 `map`、`icons`、`fx`、`font`、`runtime` 五个包。工具**先校验 zip 的 SHA-256，
+再逐个校验解包后的文件**，全部通过才落盘，所以中断或断网不会留下半装的 skill；
+重复运行会跳过已就绪的文件，也可以当修复命令用。
+
+想按需安装、手动下载、走镜像/代理、排错，或想知道每个包里有什么：
+**见 [DOWNLOAD.md](DOWNLOAD.md)**（下载与安装完整说明）。
 
 > **`runtime` 包是 Windows x64 CPython 3.12 的库。** 渲染器只要发现 `runtime/python` 存在就会把它
 > 插到 `sys.path` 最前面，所以 3.10 / 3.14 解释器会在这里导入失败。如果你的 Python 不是 3.12，
 > 请用 `--pack map,icons,fx,font` 跳过该包，改用自己的依赖：
 > `pip install -r requirements.txt`。编译版 `bin/typhoon/typhoon.exe` 自带解释器，不受此影响。
-
-素材位置可以用 `--base` 换成镜像，也可以手动下载 Release 里的 zip 解压到 skill 根目录——
-zip 内保存的就是 skill 相对路径，解压后结构与下表一致。
 
 ## 1. 安装与目录约定
 
@@ -65,6 +53,8 @@ zip 内保存的就是 skill 相对路径，解压后结构与下表一致。
 cyclone-track-animation-skill/
   README.md                     本使用指南
   SKILL.md                      agent 的总入口
+  DOWNLOAD.md                   下载与安装（素材包、镜像、排错）
+  PUBLISHING.md                 维护者：重新打包与发布
   NOTICE.md                     第三方素材与字体的授权说明
   requirements.txt              源码运行所需 Python 依赖
   assets.manifest.json          素材包清单（文件名、大小、SHA-256）
@@ -431,6 +421,7 @@ python "$SkillRoot\scripts\build_exe.py"
 
 ### 详细参考
 
+- [下载与安装](DOWNLOAD.md)
 - [single 使用约定](single/SKILL.md)
 - [single 数据与完整配置](single/references/storm-pipeline.md)
 - [season 使用约定](season/SKILL.md)

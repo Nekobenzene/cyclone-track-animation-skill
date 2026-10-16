@@ -1,66 +1,58 @@
-# Third-party notices
+# 第三方素材与授权说明
 
-The **source code** of this repository is licensed under the MIT License (see
-`LICENSE`). That license covers the code in `single/`, `season/`, `scripts/` and
-`tools/` only. It does **not** cover the SMCY1.3 asset pack, the bundled runtime
-or the fonts, which are distributed separately as GitHub Release attachments and
-remain under their own terms.
+本仓库的**源代码**采用 MIT 许可证（见 `LICENSE`），覆盖范围仅限
+`single/`、`season/`、`scripts/`、`tools/` 下的代码。
+SMCY1.3 素材包、便携运行库和字体**不在 MIT 覆盖范围内**，它们作为
+GitHub Release 附件单独发布，各自遵循原有条款。
 
-## Fonts
+## 字体
 
-| Font | Files | License |
+| 字体 | 位置 | 许可证 |
 |---|---|---|
-| Source Han Sans SC | `assets/SMCY1.3/font/SourceHanSansSC/` | SIL Open Font License 1.1 (`LICENSE.txt` is bundled in that folder) |
-| Saira | `assets/SMCY1.3/font/_saira_master/` | SIL Open Font License 1.1 |
+| 思源黑体 SC（Source Han Sans SC） | `assets/SMCY1.3/font/SourceHanSansSC/` | SIL Open Font License 1.1（该目录内含 `LICENSE.txt`） |
+| Saira | `assets/SMCY1.3/font/_saira_master/` | SIL Open Font License 1.1（`_saira_master/OFL.txt`） |
 
-Official download URLs and SHA-256 hashes for Source Han Sans SC are recorded in
-`assets/SMCY1.3/font/SourceHanSansSC/source.json`, so the font can also be
-fetched from Adobe's own release instead of from this repository.
+思源黑体的官方下载地址与 SHA-256 记录在
+`assets/SMCY1.3/font/SourceHanSansSC/source.json`，因此也可以直接从 Adobe 的
+发布页获取，而不必从本仓库下载。
 
-The OFL requires that the license text and copyright notice travel with the
-font files. Do not remove `LICENSE.txt` from either font folder when
-redistributing, and do not sell the fonts on their own.
+OFL 要求许可证文本与版权声明必须随字体文件一起分发。再分发时请勿删除两个字体目录下的
+`LICENSE.txt` / `OFL.txt`，也不要单独售卖字体。
 
 ## FFmpeg / FFprobe
 
-`runtime/bin/ffmpeg.exe` and `runtime/bin/ffprobe.exe` are the
-`ffmpeg-9.0.1-full_build` binaries from gyan.dev, a GPL (`--enable-gpl
---enable-version3`) build. They are redistributed here unmodified, as build
-inputs of the rendering pipeline.
+`runtime/bin/ffmpeg.exe` 与 `runtime/bin/ffprobe.exe` 是来自 gyan.dev 的
+`ffmpeg-9.0.1-full_build`，属于 GPL（`--enable-gpl --enable-version3`）构建，
+在此原样分发，作为渲染流程的构建输入。
 
-* Upstream project: <https://ffmpeg.org/>
-* Build provider: <https://www.gyan.dev/ffmpeg/builds/>
-* Corresponding source for the binaries as shipped: obtain it from the build
-  provider's source page, or from <https://ffmpeg.org/download.html>
+* 上游项目：<https://ffmpeg.org/>
+* 构建提供方：<https://www.gyan.dev/ffmpeg/builds/>
+* 对应源码：见构建提供方的源码页，或 <https://ffmpeg.org/download.html>
 
-If you prefer not to redistribute FFmpeg, delete `runtime/bin/` from the release
-pack you publish and have `tools/build_runtime.py` fetch a build from upstream
-instead.
+如果不希望承担 FFmpeg 的再分发责任，可以直接从发布包中删除 `runtime/bin/`，
+改由用户通过 `tools/build_runtime.py --ffmpeg <目录>` 自行获取。
 
-## Python runtime libraries
+## Python 运行库
 
-`runtime/python/` contains unmodified wheels from PyPI:
+`runtime/python/` 是来自 PyPI 的未修改 wheel：
 
-| Package | Version | License |
+| 包 | 版本 | 许可证 |
 |---|---|---|
 | NumPy | 2.3.5 | BSD-3-Clause |
 | Pillow | 12.3.0 | MIT-CMU |
-| opencv-python-headless | 5.0.0.93 | Apache-2.0 (OpenCV 4.x/5.x) |
+| opencv-python-headless | 5.0.0.93 | Apache-2.0 |
 | PyYAML | 6.0.3 | MIT |
 
-Each package keeps its own license metadata inside its `*.dist-info` folder.
+每个包各自保留许可证元数据，位于其 `*.dist-info` 目录内。
 
-## Map and effect artwork
+## 地图与特效美术素材
 
-`assets/SMCY1.3/` contains the map sheets, category icons, landfall effects,
-particles, GUI plates and sound effects used by both renderers, plus the
-optional geographic data in `assets/geo/`. These are compiled artwork; the
-repository does not relicense them. Anyone republishing a release pack is
-responsible for confirming their own right to redistribute that artwork.
+`assets/SMCY1.3/` 收录了两个渲染器共用的地图纸张、等级图标、登陆特效、粒子、
+GUI 图版与音效；`assets/geo/` 是可选的地理预处理数据。
+这些是已编译整理的美术素材，本仓库**不对其重新授权**。
+任何人重新发布素材包时，需自行确认拥有相应的再分发权利。
 
-`assets/geo/` is an optional preprocessing package. It bundles GeoNames place
-data (`cities500.txt`, `cities500.zip`) — GeoNames is published under
-CC BY 4.0 (<https://www.geonames.org/legal/>) — plus simplified country
-outlines whose upstream archive (`shapes.json.zip`) is bundled alongside the
-derived `shapes_simplified_low.json`. Attribute GeoNames if you redistribute
-that package, and re-check the outline source before publishing it widely.
+`assets/geo/` 内含 GeoNames 地名数据（`cities500.txt`、`cities500.zip`）——
+GeoNames 采用 CC BY 4.0（<https://www.geonames.org/legal/>）——以及简化国界轮廓，
+其上游压缩包 `shapes.json.zip` 与派生文件 `shapes_simplified_low.json` 放在一起。
+再分发该包时请标注 GeoNames；广泛发布前请再确认轮廓数据的来源与条款。
