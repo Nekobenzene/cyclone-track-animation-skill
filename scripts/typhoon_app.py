@@ -1,6 +1,6 @@
 """Executable entry point. Source renderers remain editable in single/ and season/."""
 from pathlib import Path
-import os, sys, argparse, subprocess, json
+import os, sys, argparse, subprocess, json, tempfile
 
 def main():
     root = Path(sys.executable).resolve().parents[2] if getattr(sys, 'frozen', False) else Path(__file__).resolve().parents[1]
@@ -37,7 +37,17 @@ def main():
         assert season_overview.load_pass1()._SKILL_ASSETS == str(root/'assets/SMCY1.3')
         for tool in ['ffmpeg','ffprobe']:
             subprocess.run([str(root/'runtime/bin'/(tool+'.exe')),'-version'],check=True,stdout=subprocess.DEVNULL)
-        print(json.dumps({'ok':True,'frozen':bool(getattr(sys,'frozen',False)),'root':str(root),'numpy':numpy.__version__,'pillow':PIL.__version__,'opencv':cv2.__version__,'yaml':yaml.__version__},ensure_ascii=False))
+        # Exercise renderer cache initialization and verify actual write access.
+        with tempfile.TemporaryDirectory(prefix='typhoon-check-') as project:
+            for renderer in (typhoon_anim, season_pass1):
+                renderer._apply_config({'paths': {
+                    'storm': project, 'assets': str(root/'assets/SMCY1.3'),
+                    'cache': str(root/'assets/_cache')}})
+                renderer._bind_paths()
+                for directory in (renderer.ICOND, renderer.FXD):
+                    with tempfile.TemporaryDirectory(prefix='.write-check-', dir=directory):
+                        pass
+        print(json.dumps({'ok':True,'cache_writable':True,'frozen':bool(getattr(sys,'frozen',False)),'root':str(root),'numpy':numpy.__version__,'pillow':PIL.__version__,'opencv':cv2.__version__,'yaml':yaml.__version__},ensure_ascii=False))
 
 if __name__ == '__main__':
     main()

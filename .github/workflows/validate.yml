@@ -54,6 +54,9 @@ jobs:
       - name: Fetch tool answers --list without downloading
         run: python tools/fetch_assets.py --list
 
+      - name: Fresh-cache renderer regressions
+        run: python -m unittest discover -s tests -v
+
       - name: No tracked build artefacts
         run: |
           $bad = git ls-files | Select-String -Pattern '(__pycache__|\.pyc$|^dist/|^assets/SMCY1\.3/|^runtime/(python|bin)/|^bin/typhoon/)'

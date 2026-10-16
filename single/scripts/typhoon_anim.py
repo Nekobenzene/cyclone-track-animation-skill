@@ -122,6 +122,12 @@ def _bind_paths():
     WAV = os.path.join(BUILD, 'audio.wav')
     os.makedirs(OUTDIR, exist_ok=True)
     os.makedirs(BUILD, exist_ok=True)
+    _ensure_cache_dirs()
+
+def _ensure_cache_dirs():
+    """Derived media is disposable: a fresh install must create its own roots."""
+    for path in (CACHE, ICOND, FXD):
+        os.makedirs(path, exist_ok=True)
 
 def _auto_panorama():
     """Fit the whole track between the cards and below the summary banner."""
@@ -1045,6 +1051,7 @@ def extract_icons():
         print('icon', k, len(os.listdir(d)))
 
 def extract_fx():
+    _ensure_cache_dirs()
     jobs = [('landfall/[Landing]C1.mp4', 'landing', 60),
             ('landfall/Landed-C1.mp4', 'landed', 60),
             ('landfall/[Landing]C5.mp4', 'landing5', 60),
@@ -1898,6 +1905,8 @@ def trail_point(h):
 
 class R:
     def __init__(self):
+        # Direct test/poster/render entry points also work before an assets pass.
+        cmd_assets()
         self._pano = None
         self.hud = build_hud()
         # item 6: the four corner panels and the timeline each get their own

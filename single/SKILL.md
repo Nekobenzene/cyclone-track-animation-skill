@@ -72,6 +72,12 @@ else is frozen, so two storms rendered months apart look identical.
 
 ## Project paths
 
+Follow [Agent working files](../SKILL.md#agent-working-files): create the storm's
+`build/` first and write all tool logs, temporary helpers, diagnostic/test files
+and intermediates there from the outset, including for background jobs. Never
+use the project root as temporary storage before cleanup. Final deliverables
+belong in `output/`; shared extracted assets remain in the shared cache.
+
 Storm projects live at `<work>/single/<Storm>/`, with YAML in `build/`:
 
 ```yaml

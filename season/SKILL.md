@@ -80,6 +80,12 @@ none of them points into another. If a helper is needed on both sides, copy it.
 
 ## Project paths
 
+Follow [Agent working files](../SKILL.md#agent-working-files): create the season's
+`build/` first and write all tool logs, temporary helpers, diagnostic/test files
+and intermediates there from the outset, including for background jobs. Never
+use the project root as temporary storage before cleanup. Final deliverables
+belong in `output/`; shared extracted assets remain in the shared cache.
+
 Season projects live at `<work>/season/<YearBasin>/`; shared assets are
 `../assets/SMCY1.3` in the parent skill by default; its shared cache is
 `../assets/_cache`. All three scripts load dependencies and FFmpeg from

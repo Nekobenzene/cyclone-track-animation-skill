@@ -37,6 +37,23 @@ Asset-relative paths such as `SMCY1.3/map/` default to this skill's `assets/SMCY
 Keep each project's inputs, build files and outputs inside that project;
 use `<work>/res/_cache` for shared extracted media.
 
+## Agent working files
+
+For both single and season tasks, create `<project>/build/` before writing any
+agent-generated working files. Tool stdout/stderr logs, render and probe logs,
+temporary helper scripts, diagnostic reports, scratch configs, test frames and
+other intermediate files must go directly into this directory (for example,
+`build/logs/`, `build/tmp/` and `build/diagnostics/`). Set explicit output paths
+and log redirections before running commands; where a tool writes relative to
+its working directory, run it from `build/` and pass explicit project paths.
+
+Do not place these files in the project root, even temporarily with the intent
+to move or delete them after rendering. Keep source inputs in `sourcedata/`
+and final deliverables in `output/`; preserve existing user-provided configs in
+their current locations. Shared extracted media stays in the configured shared
+cache rather than being copied into each project's build directory. Apply the
+same rule to background jobs and failed or interrupted runs.
+
 ## Getting the asset pack from the GitHub repository
 
 This repository tracks code, documentation and tooling only. The SMCY1.3 asset
