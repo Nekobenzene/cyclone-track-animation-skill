@@ -37,28 +37,33 @@ Asset-relative paths such as `SMCY1.3/map/` default to this skill's `assets/SMCY
 Keep each project's inputs, build files and outputs inside that project;
 use `<work>/res/_cache` for shared extracted media.
 
-## 从 GitHub 仓库安装素材包
+## Getting the asset pack from the GitHub repository
 
-本仓库只跟踪代码、文档和工具。SMCY1.3 素材包、字体和便携运行库是 GitHub Release 附件
-（其中 4 个文件超过 GitHub 的 100 MB 单文件限制，无法进 git）。克隆之后先装素材再渲染：
+This repository tracks code, documentation and tooling only. The SMCY1.3 asset
+pack, the fonts and the portable runtime are GitHub Release attachments, because
+four files in them exceed GitHub's 100 MB push limit. After cloning, install them
+before rendering:
 
 ```text
-python tools/fetch_assets.py --list          # 看有哪些包、各多大
-python tools/fetch_assets.py                 # 默认包，约 1.4 GB 下载
-python tools/fetch_assets.py --pack map,icons,fx,font   # 跳过便携运行库
+python tools/fetch_assets.py --list          # what is available and how big
+python tools/fetch_assets.py                 # default packs, ~1.4 GB download
+python tools/fetch_assets.py --pack map,icons,fx,font   # skip the portable runtime
 ```
 
-`fetch_assets.py` 会先校验压缩包的 SHA-256，再对照 `assets.manifest.json` 逐个校验解包后的
-文件，全部通过才移动到目标位置，因此中断不会留下半装的 skill；重跑即修复。
-`--base <目录或URL>` 可从镜像或手动下载的 zip 安装，`--verify-only` 只复核已装内容。
-从完整 skill 压缩包安装的副本已含全部素材，无需再执行 fetch。
+`fetch_assets.py` checks the archive's SHA-256 and then every extracted file
+against `assets.manifest.json` before moving anything into place, so an
+interrupted run cannot leave a half-installed skill; re-running repairs it.
+`--base <directory-or-URL>` installs from a mirror or from manually downloaded
+zips, and `--verify-only` re-checks what is already there. A copy installed from
+a complete skill archive already contains everything and needs no fetch.
 
-`runtime` 包是 Windows x64 CPython 3.12 的库。渲染器只要发现 `runtime/python` 存在就会把它
-放进 `sys.path`，因此 3.10 / 3.14 解释器必须改用 `--pack map,icons,fx,font`，
-并自行安装依赖（`pip install -r requirements.txt`）。
+The `runtime` pack is Windows x64 CPython 3.12. The renderers put
+`runtime/python` on `sys.path` whenever that folder exists, so on a 3.10 or 3.14
+interpreter install with `--pack map,icons,fx,font` and provide your own
+dependencies (`pip install -r requirements.txt`) instead.
 
-下载与安装的完整说明（按需安装、手动下载、镜像与代理、常见问题）见仓库根目录的
-[DOWNLOAD.md](DOWNLOAD.md)。
+The full install guide (per-pack installs, manual download, mirrors and proxies,
+troubleshooting) is `DOWNLOAD.md` in the repository root.
 
 ## Bundled resources shared by single and season
 
