@@ -1,0 +1,22 @@
+# Keep the checked-out text byte-identical to what bin/typhoon/source_manifest.json
+# records: those hashes were taken on LF sources, so force LF everywhere instead
+# of letting core.autocrlf rewrite them on Windows checkouts.
+* text=auto
+*.py   text eol=lf
+*.md   text eol=lf
+*.json text eol=lf
+*.yaml text eol=lf
+*.yml  text eol=lf
+*.txt  text eol=lf
+*.cfg  text eol=lf
+
+# Release archives and installed packs are never tracked anyway; make sure git
+# also treats them as binary so it never attempts a text diff.
+*.zip  binary
+*.mp4  binary
+*.png  binary
+*.otf  binary
+*.ttf  binary
+*.exe  binary
+*.dll  binary
+*.pyd  binary

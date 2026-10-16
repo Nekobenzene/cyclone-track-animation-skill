@@ -1,0 +1,22 @@
+# --- assets are delivered as GitHub Release packs, not through git -------------
+# See assets.manifest.json and tools/fetch_assets.py
+/assets/SMCY1.3/
+/assets/geo/
+/assets/_cache/
+
+# --- runtime is delivered as a release pack or rebuilt locally -----------------
+# runtime/platform.json is tracked; the libraries and binaries are not.
+/runtime/python/
+/runtime/bin/
+/bin/typhoon/
+
+# --- derived / local-only ------------------------------------------------------
+**/__pycache__/
+*.pyc
+*.pyo
+build/
+output/
+dist/
+_downloads/
+.dsh_assets/
+*.log

@@ -1,0 +1,17 @@
+{
+  "platform": "win32",
+  "python": "3.12.14 (main, Aug 25 2026, 14:01:42) [MSC v.1944 64 bit (AMD64)]",
+  "architecture": "Windows x64",
+  "packages": [
+    "numpy",
+    "Pillow",
+    "opencv-python-headless==5.0.0.93",
+    "PyYAML==6.0.3"
+  ],
+  "external": "Compatible Python interpreter",
+  "asset_pack": {
+    "path": "../assets/SMCY1.3",
+    "files": 693,
+    "bytes": 1534748401
+  }
+}

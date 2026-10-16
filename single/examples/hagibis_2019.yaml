@@ -1,0 +1,160 @@
+# ---------------------------------------------------------------------------
+# Typhoon HAGIBIS (2019) - WP202019 / 令和元年東日本台風 / 台风第19号
+# ---------------------------------------------------------------------------
+paths:
+  storm: C:\Users\tangtang\Desktop\work\single\2019Hagibis
+  assets: C:\Users\tangtang\Desktop\work\res\SMCY1.3
+  sourcedata: sourcedata
+  build: build
+  output: output
+  tag: hagibis
+
+output:
+  mp4: 2019_Typhoon_Hagibis_Track_Animation.mp4
+  poster: 2019_Typhoon_Hagibis_Poster.png
+
+storm:
+  id: WP202019
+  name_en: HAGIBIS
+  name_cn: 海贝思
+  name_cn_long: 台风海贝思
+  title: TYPHOON HAGIBIS
+  subtitle: 2019 - WP202019 - 令和元年東日本台風
+  source_line: JTWC BEST TRACK + JMA POST-ANALYSIS
+  intro_line: 台风海贝思  -  2019  -  WESTERN NORTH PACIFIC
+  intro_footer: JTWC BEST TRACK + JMA POST-ANALYSIS   |   HIMAWARI-8 B13   |   SMCY1.3
+  credit_line: DATA  JTWC best track - JMA post-analysis (Digital Typhoon) - 消防庁 / 内閣府 / 国交省
+
+data:
+  # 37 unique 6-hourly fixes: disturbance 2 + TC 33 + remnant 2 + extratropical 2
+  # the best-track file already contains the disturbance and remnant segments,
+  # so they are carved out of it instead of being appended twice
+  series:
+    - {file: 2019_Typhoon_Hagibis_Disturbance.txt,    phase: DB}
+    - {file: 2019_Typhoon_Hagibis_BestTrack.txt,      phase: TC, skip_first: 2, skip_last: 2}
+    - {file: 2019_Typhoon_Hagibis_Remnant_Vortex.txt, phase: RV}
+    - {file: 2019_Typhoon_Hagibis_Extratropical.txt,  phase: EX}
+
+  # re-analysis double peak.  peak1 raised 160->175 kt; the official dip in
+  # between (120 kt at 10-08 06Z) is replaced by as gentle a fit as possible,
+  # keeping a shallow minimum so the second peak still reads as a peak.
+  reanalysis:
+    set:
+      - {h:  72, wind: 175, pres: 870}   # peak 1  2019-10-07 12Z
+      - {h:  78, wind: 166, pres: 878}
+      - {h:  84, wind: 156, pres: 887}
+      - {h:  90, wind: 148, pres: 895}
+      - {h:  96, wind: 143, pres: 901}
+      - {h: 102, wind: 142, pres: 904}   # shallow minimum
+      - {h: 108, wind: 145, pres: 905}   # peak 2  2019-10-09 00Z
+    insert: []
+  ace_end_h: 180                         # ACE over the tropical-cyclone stage
+
+  rapid_intensification: true            # >=2 band jump -> direct level-to-level blend
+
+  peaks:
+    - h: 72.0
+      lon: 146.6
+      lat: 16.1
+      label: 'PEAK 1   175 kt / 870 hPa'
+      color: [255, 214, 130]
+      summary: '175 kt / 870 hPa - 10-07 12Z'
+      graph: 'peak1 175/870'
+      pano_dx: 150
+      pano_dy: -170
+      note: 注：BestTrack 官方给出 160 kt / 890 hPa
+      strong: '175 kt / 870 hPa'
+    - h: 108.0
+      lon: 140.4
+      lat: 19.8
+      label: 'PEAK 2   145 kt / 905 hPa'
+      color: [255, 158, 226]
+      summary: '145 kt / 905 hPa - 10-09 00Z'
+      graph: 'peak2 145/905'
+      pano_dx: 150
+      pano_dy: 100
+      note: 注：BestTrack 官方给出 145 kt / 902 hPa
+
+  landfall_file: landfall.txt
+  landfalls:
+    Izu Peninsula:
+      fx: landing
+      landed: landed
+      place: Izu Peninsula, Shizuoka, JP
+      cat: 1
+      off_y: 46
+      simple_dx: 132
+      simple_dy: 54
+
+  # deaths + missing per prefecture (Fire and Disaster Management Agency,
+  # 2020-10-13 18:00 JST; the column is already deaths+missing and sums to 121).
+  # The two national figures use the merged 156 / 1,234 亿 CNY calibration and
+  # are queued last.  Places with no casualties get no pop-up at all.
+  # deaths + missing per prefecture (Fire and Disaster Management Agency,
+  # 2020-10-13 18:00 JST; the column is already deaths+missing and sums to 121).
+  # Places that are close together share a `group`, so their figures are summed
+  # into a single pop-up instead of being played one after another.
+  damage:
+    - {cn: 福島県,   en: Fukushima,  lon: 140.47, lat: 37.75, dead: 38, lost: 0, loss: '0', group: 東北 3 県}
+    - {cn: 宮城県,   en: Miyagi,     lon: 140.87, lat: 38.27, dead: 22, lost: 0, loss: '0', group: 東北 3 県}
+    - {cn: 岩手県,   en: Iwate,      lon: 141.15, lat: 39.70, dead:  3, lost: 0, loss: '0', group: 東北 3 県}
+    - {cn: 長野県,   en: Nagano,     lon: 138.18, lat: 36.65, dead: 15, lost: 0, loss: '0', group: 北関東・甲信 4 県}
+    - {cn: 群馬県,   en: Gunma,      lon: 139.06, lat: 36.39, dead:  4, lost: 0, loss: '0', group: 北関東・甲信 4 県}
+    - {cn: 栃木県,   en: Tochigi,    lon: 139.88, lat: 36.57, dead:  4, lost: 0, loss: '0', group: 北関東・甲信 4 県}
+    - {cn: 茨城県,   en: Ibaraki,    lon: 140.47, lat: 36.37, dead:  3, lost: 0, loss: '0', group: 北関東・甲信 4 県}
+    - {cn: 千葉県,   en: Chiba,      lon: 140.12, lat: 35.61, dead: 12, lost: 0, loss: '0', group: 南関東 4 都県}
+    - {cn: 神奈川県, en: Kanagawa,   lon: 139.64, lat: 35.45, dead:  9, lost: 0, loss: '0', group: 南関東 4 都県}
+    - {cn: 埼玉県,   en: Saitama,    lon: 139.65, lat: 35.86, dead:  4, lost: 0, loss: '0', group: 南関東 4 都県}
+    - {cn: 東京都,   en: Tokyo,      lon: 139.69, lat: 35.69, dead:  3, lost: 0, loss: '0', group: 南関東 4 都県}
+    - {cn: 静岡県,   en: Shizuoka,   lon: 138.38, lat: 34.98, dead:  3, lost: 0, loss: '0'}
+    - {cn: 兵庫県,   en: Hyogo,      lon: 135.18, lat: 34.69, dead:  1, lost: 0, loss: '0'}
+    # the two national figures share a group, so 156 人 and 1,234 亿 arrive together
+    - {cn: 全国, en: Japan, lon: 138.90, lat: 34.90, dead: 156, lost: 0, loss: '0',    priority: 1, group: 全国}
+    - {cn: 全国, en: Japan, lon: 138.90, lat: 34.90, dead: 0,   lost: 0, loss: '1234', priority: 1, group: 全国}
+
+# the 13 prefectures all reach minimum distance inside ~2.5 s, so the numbers
+# are queued: 0.52 s apart, each living 1.3 s
+damage:
+  min_gap: 0.50
+  popup_duration: 1.1
+  spread: 70            # only a light fan is needed once the groups are merged
+
+view:
+  tracking_span_lon: 22.8
+  panorama: auto                 # fit the whole 28N x 28E track below the banner
+
+# measured from the burned-in timestamps: uniform 2.5 min/frame, no gap,
+# first frame 2019-10-05 01:30Z = h13.5, 4724 frames -> covers h13.5 .. h210.3
+cloud:
+  file: Hagibis_2019_Himawari8_Infrared_B13.mp4
+  extract_every: 4
+  h0: 13.5
+  step_h: 0.0416667
+  segment1: [0, 4723]
+  segment2: [0, 0]                # single segment: hold the last frame at the end
+  resume_h: 0.0
+  banner: Summary-N-TC-C5.mp4
+
+banner:
+  headline: 'WP202019   TYPHOON HAGIBIS   海贝思'
+  loss: CNY 123.4 bn
+  deaths: '156'
+
+audio:
+  landfall_h: 0                          # 0 = last entry in landfall.txt
+  xt_h: 210.0
+  weaken: false                          # no mainland-China weakening bed here
+
+summary:
+  sources: JTWC - JMA (Digital Typhoon) - Himawari-8 B13
+  phase2_label: EXTRATROPICAL
+  phase2_value: Pacific east of Japan - 10-13 06Z
+  damage_label: DAMAGE  死亡+失踪 / 经济损失
+  damage_lines:
+    - 日本全国  156 人（118 直接 + 38 关联 + 3 失踪）
+    - 经济损失  约 1,234 亿元（国交省确报值）
+    - 分县合计 121 人（不含关联死亡）
+
+credits:
+  - 素材包   SMCY1.3   -   麦块姚是屑
+  - 视频制作   Nekobenzene & DeepSeek V4.1 Flash

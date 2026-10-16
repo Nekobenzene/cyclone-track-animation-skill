@@ -1,0 +1,200 @@
+# ---------------------------------------------------------------------------
+# Typhoon DOLPHIN (白海豚) - 2026 - WP122026 / 12W
+# 路径：sourcedata 三份文件。灾损：sourcedata\damage.txt（纯文本口径）。
+# 云图：dapiya.cn BW 产品，须在片尾标注来源。
+# 本台风未变性，直接消散，因此没有温带气旋段。
+# ---------------------------------------------------------------------------
+paths:
+  storm: C:\Users\tangtang\Desktop\work\single\2026Dolphin
+  assets: C:\Users\tangtang\Desktop\work\res\SMCY1.3
+  sourcedata: sourcedata
+  build: build
+  output: output
+  tag: dolphin
+
+output:
+  mp4: 2026_Typhoon_Dolphin_Track_Animation.mp4
+  poster: 2026_Typhoon_Dolphin_Poster.png
+
+storm:
+  id: WP122026
+  name_en: DOLPHIN
+  name_cn: 白海豚
+  name_cn_long: 台风白海豚
+  title: TYPHOON DOLPHIN
+  subtitle: 2026 - WESTERN NORTH PACIFIC - WP122026
+  source_line: JTWC BEST TRACK - DAPIYA BW IMAGERY
+  intro_line: 台风白海豚  -  2026  -  WESTERN NORTH PACIFIC
+  intro_footer: JTWC BEST TRACK   |   DAPIYA BW CLOUD   |   SMCY1.3
+  credit_line: DATA  JTWC best track - cloud imagery dapiya.cn - 应急管理部
+
+data:
+  # 81 fixes / 438 h.  Six-hourly, densified to 3-hourly near Okinawa where the
+  # eyewall precessed; those extra fixes carry no intensity (N/A) and are used
+  # for the PATH only.  Crosses the dateline.
+  series:
+    - {file: 2026_Typhoon_Dolphin_Disturbance.txt,    phase: DB}
+    - {file: 2026_Typhoon_Dolphin_BestTrack.txt,      phase: TC}
+    - {file: 2026_Typhoon_Dolphin_Remnant_Vortex.txt, phase: RV}
+  ace_end_h: 414                         # end of the tropical-cyclone stage
+
+  rapid_intensification: true
+
+  # every local maximum of the intensity series - a maximal run of equal values
+  # strictly above the value before it and strictly after it (10 of them)
+  peaks:
+    - h: 114.0
+      lon: 169.90
+      lat: 13.70
+      label: 'PEAK 1   135 kt / 930 hPa'
+      color: [255, 214, 130]
+      summary: '135 kt / 930 hPa - 07-28 18Z'
+      graph: 'P1'
+      pano_dx: 140
+      pano_dy: -70
+    - h: 138.0
+      lon: 166.80
+      lat: 15.80
+      label: 'PEAK 2   160 kt / 905 hPa'
+      color: [255, 158, 226]
+      summary: '160 kt / 905 hPa - 07-29 18Z'
+      graph: 'P2'
+      pano_dx: 150
+      pano_dy: 96
+      strong: '160 kt / 905 hPa'
+    - h: 174.0
+      lon: 161.00
+      lat: 18.60
+      label: 'PEAK 3   145 kt / 905 hPa'
+      color: [200, 236, 255]
+      summary: '145 kt / 905 hPa - 07-31 06Z'
+      graph: 'P3'
+      pano_dx: 150
+      pano_dy: -70
+    - h: 204.0
+      lon: 156.20
+      lat: 21.60
+      label: 'PEAK 4   130 kt / 925 hPa'
+      color: [255, 196, 120]
+      summary: '130 kt / 925 hPa - 08-01 12Z'
+      graph: 'P4'
+      pano_dx: 150
+      pano_dy: 96
+    - h: 216.0
+      lon: 153.50
+      lat: 22.70
+      label: 'PEAK 5   125 kt / 920 hPa'
+      color: [220, 240, 140]
+      summary: '125 kt / 920 hPa - 08-02 00Z'
+      graph: 'P5'
+      pano_dx: -70
+      pano_dy: -96
+    - h: 276.0
+      lon: 140.60
+      lat: 25.20
+      label: 'PEAK 6   115 kt / 928 hPa'
+      color: [170, 240, 190]
+      summary: '115 kt / 928 hPa - 08-04 12Z'
+      graph: 'P6'
+      pano_dx: 150
+      pano_dy: -70
+    - h: 294.0
+      lon: 137.20
+      lat: 25.60
+      label: 'PEAK 7   105 kt / 928 hPa'
+      color: [255, 176, 214]
+      summary: '105 kt / 928 hPa - 08-05 06Z'
+      graph: 'P7'
+      pano_dx: 150
+      pano_dy: 96
+    - h: 318.0
+      lon: 132.60
+      lat: 26.60
+      label: 'PEAK 8   90 kt / 935 hPa'
+      color: [255, 232, 150]
+      summary: '90 kt / 935 hPa - 08-06 06Z'
+      graph: 'P8'
+      pano_dx: 150
+      pano_dy: -70
+    - h: 348.0
+      lon: 127.20
+      lat: 27.20
+      label: 'PEAK 9   90 kt / 934 hPa'
+      color: [180, 220, 255]
+      summary: '90 kt / 934 hPa - 08-07 12Z'
+      graph: 'P9'
+      pano_dx: 150
+      pano_dy: 96
+    - h: 372.0
+      lon: 124.80
+      lat: 27.00
+      label: 'PEAK 10   95 kt / 934 hPa'
+      color: [200, 255, 210]
+      summary: '95 kt / 934 hPa - 08-08 12Z'
+      graph: 'P10'
+      pano_dx: 150
+      pano_dy: -70
+
+  # two landfalls 1.2 h and 27 km apart on the Zhejiang coast
+  landfall_file: landfall.txt
+  landfalls:
+    Yuhuan:  {place: Yuhuan, Zhejiang, CN,  off_y: -96, simple_dx: -150, simple_dy: -40, color: [255, 196, 120]}
+    Yueqing: {place: Yueqing, Zhejiang, CN, off_y: 56,  simple_dx: -150, simple_dy: 40,  color: [255, 216, 130]}
+
+  # damage.txt: only the mainland figure is an official one; the Philippine
+  # figure is shared with Typhoon Kujira and the SW monsoon
+  damage:
+    - {cn: 中国大陆, en: China,       lon: 121.00, lat: 28.50, dead: 6,  lost: 0, loss: '282.6'}
+    - {cn: 菲律宾,   en: Philippines, lon: 121.00, lat: 17.50, dead: 29, lost: 3, loss: '6.6'}
+    - {cn: 日本,     en: Japan,       lon: 127.90, lat: 26.50, dead: 0,  lost: 0, loss: '0.35'}
+    - {cn: 韩国,     en: Korea,       lon: 127.00, lat: 34.50, dead: 1,  lost: 0, loss: '0'}
+
+damage:
+  min_gap: 0.70
+  popup_duration: 1.6
+  spread: 90
+
+view:
+  tracking_span_lon: 22.8
+  panorama: auto
+  warp: auto
+
+# dapiya BW loop: 1210x1210, 10 min per frame, no gap.
+# Kept as-is except for a centre crop, because the product is storm-centred.
+cloud:
+  file: Dolphin_2026_BW_cloud_loop.mp4
+  extract_every: 1                       # 10 min/frame needs every frame
+  crop: 700                              # centre crop of the 1210 source
+  h0: 73.8333                            # data hour of cloud frame 0 (07-27 01:50Z)
+  step_h: 0.1666667                      # 10 minutes
+  segment1: [0, 2148]
+  segment2: [0, 0]
+  resume_h: 0.0
+  banner: Summary-N-TC-C5.mp4
+
+banner:
+  headline: 'WP122026   TYPHOON DOLPHIN   白海豚'
+  loss: CNY 28.3 bn
+  deaths: '39'
+
+audio:
+  landfall_h: 0
+  xt_h: 0
+  weaken: false
+
+summary:
+  note: 全球损失口径无法合并
+  sources: JTWC best track - dapiya.cn BW imagery - 应急管理部
+  phase2_label: DISSIPATED
+  phase2_value: Inland China - 08-10 18Z to 08-11 06Z
+  damage_label: DAMAGE  死亡+失踪 / 经济损失
+  damage_lines:
+    - 中国大陆 6 - CNY282.6 亿（官方）
+    - 菲律宾 32（与鲸鱼共同影响）- CNY6.6 亿
+    - 日本 0 / 韩国 1 - CNY0.35 亿
+    - 中国台湾地区 0 死（受伤 8）- 无可靠损失额
+
+credits:
+  - 云图   dapiya.cn   BW 产品
+  - 素材包   SMCY1.3   -   麦块姚是屑
+  - 视频制作   Nekobenzene & DeepSeek V4.1 Flash

@@ -1,0 +1,11 @@
+# Runtime dependencies of the renderers, matching the packaged runtime that ships
+# as the `runtime` release pack (see runtime/platform.json).
+#
+# The scripts load these from runtime/python when that folder exists; otherwise
+# they fall back to whatever the running interpreter already has installed.
+#
+# Target platform of the shipped runtime: Windows x64, CPython 3.12.
+numpy==2.3.5
+Pillow==12.3.0
+opencv-python-headless==5.0.0.93
+PyYAML==6.0.3

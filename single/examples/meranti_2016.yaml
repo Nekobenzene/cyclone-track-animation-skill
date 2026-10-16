@@ -1,0 +1,143 @@
+# ---------------------------------------------------------------------------
+# Typhoon MERANTI (2016) - WP172016
+# Reference config: reproduces 2016_Typhoon_Meranti_Track_Animation_v8.mp4
+# ---------------------------------------------------------------------------
+paths:
+  storm: C:\Users\tangtang\Desktop\work\single\2016Meranti   # the per-storm folder
+  assets: C:\Users\tangtang\Desktop\work\res\SMCY1.3  # shared asset pack (explicit shared resource path)
+  sourcedata: sourcedata        # track txt + satellite loop      (default "sourcedata")
+  build: build                  # intermediates                   (default "build")
+  output: output                # finished MP4 + poster           (default "output")
+  tag: v8                       # intermediate suffix: icons_<tag>, fx_<tag>
+
+output:
+  mp4: 2016_Typhoon_Meranti_Track_Animation_v9.mp4
+  poster: 2016_Typhoon_Meranti_Poster_v9.png
+
+storm:
+  id: WP172016
+  name_en: MERANTI
+  name_cn: 莫兰蒂           # banner / summary short form
+  name_cn_long: 台风莫兰蒂   # HUD + intro form
+  title: TYPHOON MERANTI
+  subtitle: 2016 - WESTERN NORTH PACIFIC - WP172016
+  source_line: JTWC BEST TRACK + JMA POST-ANALYSIS
+  intro_line: 台风莫兰蒂  -  2016  -  WESTERN NORTH PACIFIC
+  intro_footer: JTWC BEST TRACK + JMA POST-ANALYSIS   |   HIMAWARI-8 B13   |   SMCY1.3
+  credit_line: DATA  JTWC best track - JMA post-analysis (Digital Typhoon) - 民政部 / 农委会 / NDRRMC
+  note: 注：BestTrack 官方给出 170 kt / 895 hPa 单峰   # low-key note near the peak
+
+data:
+  series:
+    - {file: 2016_Typhoon_Meranti_Disturbance.txt,   phase: DB}
+    - {file: 2016_Typhoon_Meranti_BestTrack.txt,     phase: TC, skip_first: true}
+    - {file: 2016_Typhoon_Meranti_Remnant_Vortex.txt, phase: RV}
+    - {file: 2016_Typhoon_Meranti_Extratropical.txt,  phase: EX}
+  # re-analysis calibration on top of the raw series (double peak)
+  reanalysis:
+    set:
+      - {h: 108, pres: 890}          # peak 1
+      - {h: 114, wind: 175, pres: 880}   # peak 2
+    insert:
+      - {h: 111, wind: 162, pres: 886}   # brief adjustment between the peaks
+  ace_end_h: 162                     # ACE counts 6-hourly TC fixes up to here
+
+  peaks:
+    - h: 108.0
+      lon: 124.1
+      lat: 20.2
+      label: 'PEAK 1   165 kt / 890 hPa'
+      color: [255, 214, 130]
+      summary: '165 kt / 890 hPa - 09-13 06Z'
+      graph: 'peak1 165/890'    # micro-label on the intensity curve
+      pano_dx: 152              # panorama tag offset
+      pano_dy: -44
+      strong: '175 kt / 880 hPa'
+    - h: 114.0
+      lon: 122.9
+      lat: 20.4
+      label: 'PEAK 2   175 kt / 880 hPa'
+      color: [255, 158, 226]
+      summary: '175 kt / 880 hPa - 09-13 12Z'
+      graph: 'peak2 175/880'
+      pano_dx: 152
+      pano_dy: 62
+
+  # landfall times/positions come from sourcedata/landfall.txt; this block only
+  # holds presentation, keyed by the same short name (case-insensitive)
+  landfall_file: landfall.txt
+  landfalls:
+    Itbayat:
+      fx: landing5
+      landed: landed5
+      place: Itbayat, Batanes, PH
+      cat: 5
+      off_y: 62               # label offset in the follow-cam view
+      simple_dx: -52          # panorama tag: negative -> text to the left
+      simple_dy: 6
+      color: [255, 150, 220]
+    Kinmen:
+      fx: landing
+      landed: landed
+      place: Kinmen, Fujian, CN
+      cat: 1
+      off_y: -96
+      simple_dx: -62
+      simple_dy: -74
+      color: [255, 196, 120]
+    Xiamen:
+      fx: landing
+      landed: landed
+      place: Xiamen, Fujian, CN
+      cat: 1
+      off_y: 40
+      simple_dx: -62
+      simple_dy: 74
+      color: [255, 216, 130]
+
+  # damage figures fly out when the centre is closest to each place
+  damage:
+    - {cn: 巴丹群岛, en: Batanes, PH,   lon: 121.87, lat: 20.79, dead: 0,  lost: 0,  loss: '0.34'}
+    - {cn: 台湾南部, en: S. Taiwan,     lon: 120.85, lat: 21.90, dead: 1,  lost: 0,  loss: '1.70'}
+    - {cn: 福建,     en: Fujian, CN,    lon: 118.08, lat: 24.48, dead: 18, lost: 11, loss: '74.9'}
+    - {cn: 浙江,     en: Zhejiang, CN,  lon: 120.70, lat: 27.99, dead: 11, lost: 4,  loss: '42.2'}
+
+view:
+  tracking_span_lon: 22.8
+  panorama_span_lon: 52.0
+  panorama_center: [130.9, 25.6]
+
+cloud:
+  file: Meranti_2016_Himawari8_Infrared_B13.mp4   # relative to sourcedata
+  extract_every: 4          # keep every Nth source frame (25 fps source -> 6.25 fps)
+  h0: 25.3333               # data hour of cloud frame 0   (09-09 19:20Z)
+  step_h: 0.0416667         # data hours per source frame (2.5 min)
+  segment1: [0, 2721]       # uniform segment
+  segment2: [2724, 3342]    # after the 46 h jump
+  resume_h: 184.25          # data hour where segment 2 starts (09-16 10:15Z)
+  banner: Summary-N-TC-C5.mp4
+
+banner:
+  headline: 'WP172016   TYPHOON MERANTI   莫兰蒂'
+  line2: 'PEAK 175 kt / 880 hPa      ACE 29.06 x10^4 kt2      LOSS ~ CNY 11.91 bn      DEATHS 30'
+  loss: CNY 11.91 bn
+  deaths: '30'
+
+audio:
+  landfall_h: 0             # 0 = last entry in landfall.txt (drives weaken.ogg)
+  xt_h: 198.0               # extratropical transition
+
+summary:
+  sources: JTWC - JMA (Digital Typhoon) - Himawari-8 B13
+  phase2_label: EXTRATROPICAL
+  phase2_value: Yellow Sea - 09-17 00Z
+  damage_label: DAMAGE  死亡+失踪 / 经济损失
+  damage_lines:
+    - 中国大陆  29 死 15 失踪 - CNY117.1 亿
+    - 中国台湾  1 死 - CNY1.70 亿（农业）
+    - 菲律宾  0 死 - CNY0.34 亿
+
+credits:
+  - 素材包   SMCY1.3   -   麦块姚是屑
+  - 视频制作   Nekobenzene & DeepSeek V4.1 Flash
+

@@ -1,0 +1,113 @@
+# Typhoon track animation - config template
+#
+# Copy this file, fill in the storm-specific values, then:
+#   python <skill>\scripts\typhoon_anim.py --config my_storm.yaml info
+#   python <skill>\scripts\typhoon_anim.py --config my_storm.yaml assets
+#   python <skill>\scripts\typhoon_anim.py --config my_storm.yaml test
+#   python <skill>\scripts\typhoon_anim.py --config my_storm.yaml all
+#
+# See ../references/storm-pipeline.md for the full field reference.
+
+# canonical layout: <root>/res/SMCY1.3 shared by <root>/single/<Storm>/{sourcedata,build,output}
+paths:
+  storm:      C:\path\to\work\single\StormName     # the per-storm folder
+  assets:     C:\path\to\work\res\SMCY1.3      # set explicitly for the workspace layout
+  sourcedata: sourcedata          # optional; defaults to "sourcedata"
+  build:      build               # optional; defaults to "build"
+  output:     output              # optional; defaults to "output"
+  tag:        storm1              # intermediates: icons_storm1 / fx_storm1
+
+output:
+  mp4:    my_storm_animation.mp4
+  poster: my_storm_poster.png
+
+storm:
+  id:          WP000000
+  name_en:     NAME
+  name_cn:     中文名             # short, used on the panorama banner
+  name_cn_long: 台风中文名          # HUD subtitle + intro
+  title:       TYPHOON NAME
+  subtitle:    20XX - WESTERN NORTH PACIFIC - WP000000
+  source_line: JTWC BEST TRACK + JMA POST-ANALYSIS
+  intro_line:  台风中文名  -  20XX  -  WESTERN NORTH PACIFIC
+  intro_footer: JTWC BEST TRACK + JMA POST-ANALYSIS   |   HIMAWARI-8 B13   |   SMCY1.3
+  credit_line: DATA  JTWC best track - JMA post-analysis (Digital Typhoon) - 民政部 / 农委会 / NDRRMC
+
+data:
+  # one point per line:  YYYY-MM-DD-HH-MM-SS  lon  lat  wind_kt  pres_hpa
+  # (lon first).  The interval is read from the data - 6-hourly or 3-hourly both
+  # work, but keep it uniform inside one storm.  Delete any segment the storm
+  # does not have.  skip_first / skip_last are COUNTS: use them when the main
+  # table already contains the disturbance / remnant stretches.
+  series:
+    - {file: disturbance.txt, phase: DB}
+    - {file: besttrack.txt,   phase: TC}
+    - {file: remnant.txt,     phase: RV}      # optional
+    - {file: extratropical.txt, phase: EX}    # optional
+
+  # calibrated intensity on top of the raw series (delete if not needed)
+  reanalysis:
+    set:    [{h: 0, pres: 0}]
+    insert: [{h: 0, wind: 0, pres: 0}]
+  ace_end_h: 0
+
+  peaks:
+    - {h: 0.0, lon: 0.0, lat: 0.0, label: 'PEAK 1   000 kt / 000 hPa',
+       color: [255,214,130], summary: '000 kt / 000 hPa - MM-DD HHZ',
+       graph: 'peak1 000/000', pano_dx: 152, pano_dy: -44}
+
+  # optional: let a compact file carry time+position, keep presentation here
+  # landfall_file: landfall.txt
+  landfalls:
+    ShortName:                   # must match the name in landfall.txt
+      fx: landing                # landing|landed (C1) or landing5|landed5 (C5)
+      landed: landed
+      place: Full Place Name
+      cat: 1
+      off_y: 40                  # follow-cam label offset
+      simple_dx: -62             # panorama tag offset (negative -> text left)
+      simple_dy: 74
+      color: [255, 216, 130]
+    # without landfall_file, give h/lon/lat inline instead:
+    # Inline: {h: 0.0, lon: 0.0, lat: 0.0, place: Place, stamp: 'MM-DD HHZ', cat: 1}
+
+  damage:
+    - {cn: 地点, en: Place, lon: 0.0, lat: 0.0, dead: 0, lost: 0, loss: '0.00'}
+
+view:
+  tracking_span_lon: 22.8
+  panorama_span_lon: 52.0
+  panorama_center:   [0.0, 0.0]     # keep the track below the banner
+
+# delete this whole block when there is no satellite loop
+cloud:
+  file: satellite_loop.mp4      # relative to sourcedata
+  extract_every: 4
+  h0: 0.0
+  step_h: 0.0416667
+  segment1: [0, 0]
+  segment2: [0, 0]
+  resume_h: 0.0
+  banner: Summary-N-TC-C5.mp4
+
+banner:
+  headline: 'WP000000   TYPHOON NAME   中文名'
+  line2:    'PEAK 000 kt / 000 hPa      ACE 0.00 x10^4 kt2      LOSS ~ CNY 0.00 bn      DEATHS 0'
+  loss: CNY 0.00 bn
+  deaths: '0'
+
+audio:
+  landfall_h: 0.0
+  xt_h: 0.0
+
+summary:
+  note: ''
+  sources: JTWC - JMA (Digital Typhoon) - Himawari-8 B13
+  phase2_label: EXTRATROPICAL
+  phase2_value: ''
+  damage_label: DAMAGE  死亡+失踪 / 经济损失
+  damage_lines: []
+
+credits:
+  - 素材包   SMCY1.3   -   麦块姚是屑
+  - 视频制作   Nekobenzene & DeepSeek V4.1 Flash

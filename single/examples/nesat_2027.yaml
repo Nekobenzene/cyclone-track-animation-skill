@@ -1,0 +1,155 @@
+# ---------------------------------------------------------------------------
+# Typhoon NESAT (纳沙) - 2027 - HYPOTHETICAL / 假想台风
+# 全部路径、强度与灾损数据来自 sourcedata 的项目设定，非真实事件。
+# ---------------------------------------------------------------------------
+paths:
+  storm: C:\Users\tangtang\Desktop\work\single\Nesat（假想）
+  assets: C:\Users\tangtang\Desktop\work\res\SMCY1.3
+  sourcedata: sourcedata
+  build: build
+  output: output
+  tag: nesat
+
+output:
+  mp4: 2027_Typhoon_Nesat_Track_Animation.mp4
+  poster: 2027_Typhoon_Nesat_Poster.png
+
+storm:
+  hypothetical: true                 # fictional scenario -> intro says hypoTY / 假想台风
+  id: WP162027
+  name_en: NESAT
+  name_cn: 纳沙
+  name_cn_long: 台风纳沙
+  title: TYPHOON NESAT
+  subtitle: 2027 - WESTERN NORTH PACIFIC - WP162027（假想情景）
+  source_line: HYPOTHETICAL SCENARIO - NOT A REAL EVENT
+  intro_line: 台风纳沙  -  2027  -  WESTERN NORTH PACIFIC
+  intro_footer: 假想情景  HYPOTHETICAL SCENARIO   |   SMCY1.3
+  credit_line: DATA  hypothetical scenario supplied with the project - NOT a real event
+
+data:
+  # 144 fixes at 3-hourly resolution, mutually exclusive segments
+  series:
+    - {file: 2027_Typhoon_Nesat_Disturbance.txt,    phase: DB}
+    - {file: 2027_Typhoon_Nesat_BestTrack.txt,      phase: TC}
+    - {file: 2027_Typhoon_Nesat_Remnant_Vortex.txt, phase: RV}
+    - {file: 2027_Typhoon_Nesat_Extratropical.txt,  phase: EX}
+  ace_end_h: 288                         # end of the tropical-cyclone stage
+
+  rapid_intensification: true
+
+  peaks:
+    - h: 96.0
+      lon: 154.07
+      lat: 8.85
+      label: 'PEAK 1   155 kt / 900 hPa'
+      color: [196, 236, 255]
+      summary: '155 kt / 900 hPa - 10-05 00Z'
+      graph: 'P1'
+      pano_dx: 61
+      pano_dy: -123
+    - h: 126.0
+      lon: 147.28
+      lat: 9.75
+      label: 'PEAK 2   190 kt / 865 hPa'
+      color: [255, 214, 130]
+      summary: '190 kt / 865 hPa - 10-06 06Z'
+      graph: 'P2'
+      pano_dx: 156
+      pano_dy: -180
+      strong: '190 kt / 865 hPa'
+    - h: 150.0
+      lon: 141.84
+      lat: 10.47
+      label: 'PEAK 3   180 kt / 875 hPa'
+      color: [255, 158, 226]
+      summary: '180 kt / 875 hPa - 10-07 06Z'
+      graph: 'P3'
+      pano_dx: 232
+      pano_dy: -30
+    - h: 183.0
+      lon: 133.30
+      lat: 14.05
+      label: 'PEAK 4   125 kt / 925 hPa'
+      color: [255, 196, 120]
+      summary: '125 kt / 925 hPa - 10-08 15Z'
+      graph: 'P4'
+      pano_dx: 350
+      pano_dy: 85
+    - h: 207.0
+      lon: 128.40
+      lat: 18.25
+      label: 'PEAK 5   125 kt / 923 hPa'
+      color: [170, 226, 255]
+      summary: '125 kt / 923 hPa - 10-09 15Z'
+      graph: 'P5'
+      pano_dx: 19
+      pano_dy: -72
+
+  landfall_file: landfall.txt
+  landfalls:
+    Kochi:
+      fx: landing
+      landed: landed
+      place: Kochi, Shikoku, JP
+      cat: 1
+      off_y: -104
+      simple_dx: 130
+      simple_dy: -78
+      color: [255, 196, 120]
+    Wakayama:
+      fx: landing
+      landed: landed
+      place: Wakayama, Kii, JP
+      cat: 1
+      off_y: 46
+      simple_dx: 130
+      simple_dy: 78
+      color: [255, 216, 130]
+
+  # six affected regions; the track never crosses the centre over the first
+  # four, so they fire on closest approach to the outlying rain bands
+  damage:
+    - {cn: 日本,       en: Japan,        lon: 133.53, lat: 33.56, dead: 61, lost: 0, loss: '586'}
+    - {cn: 菲律宾,     en: Philippines,  lon: 121.50, lat: 17.50, dead: 16, lost: 0, loss: '68'}
+    - {cn: 中国大陆,   en: China,        lon: 118.50, lat: 24.50, dead:  8, lost: 0, loss: '32'}
+    - {cn: 中国台湾地区, en: Taiwan,      lon: 121.30, lat: 23.50, dead:  6, lost: 0, loss: '21'}
+    - {cn: 美国阿拉斯加州, en: Alaska,    lon: -149.90, lat: 61.20, dead: 5, lost: 0, loss: '19'}
+    - {cn: 加拿大,     en: Canada,       lon: -135.10, lat: 60.70, dead:  4, lost: 0, loss: '15'}
+
+damage:
+  min_gap: 0.55
+  popup_duration: 1.3
+  spread: 90
+
+view:
+  tracking_span_lon: 22.8
+  panorama: auto
+  warp: auto                             # pause at the real peak and landfall
+
+# no satellite loop: this is a hypothetical storm, so the inset is left out
+
+banner:
+  headline: 'WP162027   TYPHOON NESAT   纳沙   （假想）'
+  loss: CNY 74.1 bn
+  deaths: '100'
+
+audio:
+  landfall_h: 0                          # 0 = last entry in landfall.txt
+  xt_h: 321.0                            # extratropical transition
+  weaken: false
+
+summary:
+  sources: HYPOTHETICAL SCENARIO - all track, intensity and loss data are fictional
+  phase2_label: EXTRATROPICAL
+  phase2_value: North Pacific - 10-14 15Z to 10-18 21Z
+  damage_label: DAMAGE  死亡 / 经济损失（假想）
+  damage_lines:
+    - 日本  61 死 - CNY586 亿
+    - 菲律宾 16 / 台湾 6 / 大陆 8 - CNY121 亿
+    - 阿拉斯加 5 / 加拿大 4 - CNY34 亿
+    - 合计  100 死 - CNY741 亿
+
+credits:
+  - 素材包   SMCY1.3   -   麦块姚是屑
+  - 视频制作   Nekobenzene & DeepSeek V4.1 Flash

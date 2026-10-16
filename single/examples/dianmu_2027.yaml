@@ -1,0 +1,132 @@
+# ---------------------------------------------------------------------------
+# Typhoon DIANMU (电母) - 2027 - HYPOTHETICAL / 假想台风
+# 全部路径、强度与灾损数据来自 sourcedata 的项目设定，非真实事件。
+# 本台风未变性为温带气旋，直接消散，因此没有温带气旋段。
+# ---------------------------------------------------------------------------
+paths:
+  storm: C:\Users\tangtang\Desktop\work\single\Dianmu（假想）
+  assets: C:\Users\tangtang\Desktop\work\res\SMCY1.3
+  sourcedata: sourcedata
+  build: build
+  output: output
+  tag: dianmu
+
+output:
+  mp4: 2027_Typhoon_Dianmu_Track_Animation.mp4
+  poster: 2027_Typhoon_Dianmu_Poster.png
+
+storm:
+  hypothetical: true                 # fictional scenario -> intro says hypoTY / 假想台风
+  id: WP142027
+  name_en: DIANMU
+  name_cn: 电母
+  name_cn_long: 台风电母
+  title: TYPHOON DIANMU
+  subtitle: 2027 - WESTERN NORTH PACIFIC - WP142027（假想情景）
+  source_line: HYPOTHETICAL SCENARIO - NOT A REAL EVENT
+  intro_line: 台风电母  -  2027  -  WESTERN NORTH PACIFIC
+  intro_footer: 假想情景  HYPOTHETICAL SCENARIO   |   SMCY1.3
+  credit_line: DATA  hypothetical scenario supplied with the project - NOT a real event
+
+data:
+  # 78 fixes at 6-hourly resolution.  Three phases only: this storm dissipated
+  # directly instead of becoming extratropical, so there is no EX segment.
+  series:
+    - {file: 2027_Typhoon_Dianmu_Disturbance.txt,    phase: DB}
+    - {file: 2027_Typhoon_Dianmu_BestTrack.txt,      phase: TC}
+    - {file: 2027_Typhoon_Dianmu_Remnant_Vortex.txt, phase: RV}
+  ace_end_h: 305                         # end of the tropical-cyclone stage
+
+  rapid_intensification: true
+
+  peaks:
+    - h: 105.0
+      lon: 140.46
+      lat: 9.18
+      label: 'PEAK 1   160 kt / 895 hPa'
+      color: [255, 214, 130]
+      summary: '160 kt / 895 hPa - 09-10 03Z'
+      graph: 'P1'
+      pano_dx: 150
+      pano_dy: -120
+    - h: 142.0
+      lon: 129.86
+      lat: 9.27
+      label: 'PEAK 2   190 kt / 865 hPa'
+      color: [255, 158, 226]
+      summary: '190 kt / 865 hPa - 09-11 16Z'
+      graph: 'P2'
+      pano_dx: -60
+      pano_dy: -160
+      strong: '190 kt / 865 hPa'
+    - h: 234.0
+      lon: 111.48
+      lat: 16.45
+      label: 'PEAK 3   110 kt / 940 hPa'
+      color: [170, 226, 255]
+      summary: '110 kt / 940 hPa - 09-15 12Z'
+      graph: 'P3'
+      pano_dx: 40
+      pano_dy: -110
+
+  # eight landfalls across the Philippines and then Vietnam.  Anything above
+  # 155 kt automatically switches to the C6 super-cyclone impact set, scaled by
+  # 1 + (wind - 155) * 3 %.
+  landfall_file: landfall.txt
+  landfalls:
+    Siargao:  {place: Siargao, PH,      cat: 5, off_y: -228, simple_dx: 120, simple_dy: -120, color: [255, 150, 220]}
+    Samar:    {place: Samar, PH,        cat: 5, off_y: -150, simple_dx: 130, simple_dy: -46,  color: [255, 176, 214]}
+    Leyte:    {place: Leyte, PH,        cat: 5, off_y: -72,  simple_dx: 140, simple_dy: 30,   color: [255, 196, 200]}
+    Cebu:     {place: Cebu, PH,         cat: 5, off_y: 6,    simple_dx: 150, simple_dy: 104,  color: [255, 214, 170]}
+    Negros:   {place: Negros, PH,       cat: 5, off_y: 84,   simple_dx: 150, simple_dy: 176,  color: [255, 226, 150]}
+    Panay:    {place: Panay, PH,        cat: 4, off_y: 162,  simple_dx: 150, simple_dy: 248,  color: [220, 240, 140]}
+    Calamian: {place: Calamian Is., PH, cat: 4, off_y: 240,  simple_dx: 150, simple_dy: 318,  color: [170, 240, 190]}
+    Vietnam:  {place: Nghe An, Vietnam, cat: 3, off_y: 46,   simple_dx: 118,  simple_dy: 74,  color: [255, 200, 130]}
+
+  # six affected regions; the Philippines carry almost all of the loss
+  damage:
+    - {cn: 菲律宾,   en: Philippines, lon: 125.00, lat: 11.00, dead: 998, lost: 0, loss: '930'}
+    - {cn: 越南,     en: Vietnam,     lon: 105.70, lat: 20.00, dead:   7, lost: 0, loss: '72'}
+    - {cn: 老挝,     en: Laos,        lon: 103.50, lat: 19.50, dead:   3, lost: 0, loss: '14'}
+    - {cn: 柬埔寨,   en: Cambodia,    lon: 105.00, lat: 12.50, dead:   2, lost: 0, loss: '7'}
+    - {cn: 中国南部, en: S. China,    lon: 110.00, lat: 21.50, dead:   1, lost: 0, loss: '4'}
+    - {cn: 其他地区, en: Other,       lon: 102.50, lat: 21.20, dead:   1, lost: 0, loss: '3'}
+
+damage:
+  min_gap: 0.70
+  popup_duration: 1.5
+  spread: 90
+
+view:
+  tracking_span_lon: 22.8
+  landfall_tag_hold: 2.2               # 6 landfalls inside 3 s would otherwise stack
+  panorama: auto
+  warp: auto
+  wind_axis_max: 200                    # 190 kt peak; 200 kt is the black ceiling
+
+# no satellite loop: hypothetical storm
+
+banner:
+  headline: 'WP142027   TYPHOON DIANMU   电母   （假想）'
+  loss: CNY 103 bn
+  deaths: '1012'
+
+audio:
+  landfall_h: 0
+  xt_h: 0
+  weaken: false
+
+summary:
+  sources: HYPOTHETICAL SCENARIO - fictional data
+  phase2_label: DISSIPATED
+  phase2_value: Indochina - 09-18 17Z to 09-19 23Z
+  damage_label: DAMAGE  死亡 / 经济损失（假想）
+  damage_lines:
+    - 菲律宾  998 死 - CNY930 亿
+    - 越南 7 / 老挝 3 / 柬埔寨 2 - CNY93 亿
+    - 中国南部 1 / 其他地区 1 - CNY7 亿
+    - 合计  1,012 死 - CNY1,030 亿
+
+credits:
+  - 素材包   SMCY1.3   -   麦块姚是屑
+  - 视频制作   Nekobenzene & DeepSeek V4.1 Flash

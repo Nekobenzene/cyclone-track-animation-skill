@@ -1,0 +1,93 @@
+paths:
+  storm: C:\Users\tangtang\Desktop\work\single\2026Dujuan
+  assets: C:\Users\tangtang\Desktop\work\res\SMCY1.3
+  sourcedata: sourcedata
+  build: build
+  output: output
+  tag: dujuan
+output:
+  mp4: 2026_Typhoon_Dujuan_Track_Animation.mp4
+  poster: 2026_Typhoon_Dujuan_Poster.png
+storm:
+  id: WP242026
+  name_en: DUJUAN
+  name_cn: 杜鹃
+  name_cn_long: 台风杜鹃
+  title: TYPHOON DUJUAN
+  subtitle: 2026 - WESTERN NORTH PACIFIC - WP242026
+  source_line: IBTrACS ACTIVE (PROVISIONAL)
+  intro_line: 台风杜鹃  -  2026  -  WESTERN NORTH PACIFIC
+  intro_footer: IBTrACS ACTIVE CLOUD   |   SMCY1.3
+  credit_line: DATA  IBTrACS v04r01 ACTIVE (provisional tcvitals) - NCEI
+  ef_rating: true
+data:
+  ace_end_h: 258
+  damage_loss_unit: yuan
+  rapid_intensification: true
+  peaks:
+  - h: 144.0
+    lon: 146.0
+    lat: 25.2
+    label: PEAK 1   70 kt / 981 hPa
+    color:
+    - 255
+    - 214
+    - 130
+    summary: 70 kt / 981 hPa - 09-17 18Z
+    graph: P1
+    pano_dx: 150
+    pano_dy: -70
+  - h: 165.0
+    lon: 141.2
+    lat: 25.8
+    label: PEAK 2   105 kt / 948 hPa
+    color:
+    - 255
+    - 158
+    - 226
+    summary: 105 kt / 948 hPa - 09-18 15Z
+    graph: P2
+    pano_dx: -80
+    pano_dy: -80
+    strong: 105 kt / 948 hPa
+  - h: 234.0
+    lon: 141.8
+    lat: 34.9
+    label: PEAK 3   75 kt / 971 hPa
+    color:
+    - 200
+    - 236
+    - 255
+    summary: 75 kt / 971 hPa - 09-21 12Z
+    graph: P3
+    pano_dx: 150
+    pano_dy: 80
+  landfalls: {}
+damage:
+  min_gap: 0.7
+  popup_duration: 1.6
+  spread: 90
+view:
+  tracking_span_lon: 22.8
+  panorama: auto
+  warp: auto
+banner:
+  headline: WP242026   TYPHOON DUJUAN   杜鹃
+  loss: CNY 0.047 bn
+  deaths: '13'
+audio:
+  landfall_h: 0
+  xt_h: 0
+  weaken: false
+summary:
+  note: 定强为实时业务估计值（IBTrACS PROVISIONAL），非事后最佳路径
+  sources: IBTrACS v04r01 ACTIVE (provisional tcvitals) - NCEI 2026-10-02
+  phase2_label: EXTRATROPICAL
+  phase2_value: 09-22 18Z to 09-23 00Z
+  damage_label: DAMAGE  死亡+失踪 / 经济损失
+  damage_lines:
+  - 千叶 8 - CNY0.47 亿
+  - 神奈川 5 - 无损失数据
+credits:
+- 素材包   SMCY1.3   -   麦块姚是屑
+- 视频制作   Nekobenzene & DeepSeek V4.1 Flash

@@ -1,0 +1,126 @@
+# ---------------------------------------------------------------------------
+# Typhoon WAYNE (韦恩) - 1986 - WP131986 / 8614 / 13W
+# 路径：JTWC best track。灾损：香港天文台《Meteorological Results 1986》为主，
+# 与 JTWC 1986 年报、中国灾害史料存在口径差异，见 sourcedata\damage.txt。
+# 本台风未变性为温带气旋，直接消散，因此没有温带气旋段。
+# ---------------------------------------------------------------------------
+paths:
+  storm: C:\Users\tangtang\Desktop\work\single\1986Wayne
+  assets: C:\Users\tangtang\Desktop\work\res\SMCY1.3
+  sourcedata: sourcedata
+  build: build
+  output: output
+  tag: wayne
+
+output:
+  mp4: 1986_Typhoon_Wayne_Track_Animation.mp4
+  poster: 1986_Typhoon_Wayne_Poster.png
+
+storm:
+  id: WP131986
+  name_en: WAYNE
+  name_cn: 韦恩
+  name_cn_long: 台风韦恩
+  title: TYPHOON WAYNE
+  subtitle: 1986 - WESTERN NORTH PACIFIC - WP131986
+  source_line: JTWC BEST TRACK - HONG KONG OBSERVATORY
+  intro_line: 台风韦恩  -  1986  -  WESTERN NORTH PACIFIC
+  intro_footer: JTWC BEST TRACK   |   HONG KONG OBSERVATORY 1986   |   SMCY1.3
+  credit_line: DATA  JTWC best track - Hong Kong Observatory, Meteorological Results 1986
+
+data:
+  # 86 fixes, 6-hourly, 510 h.  Disturbance 8 + tropical cyclone 77 + one
+  # remnant-vortex fix; no extratropical stage - the storm simply dissipated.
+  series:
+    - {file: 1986_Typhoon_Wayne_Disturbance.txt,    phase: DB}
+    - {file: 1986_Typhoon_Wayne_BestTrack.txt,      phase: TC}
+    - {file: 1986_Typhoon_Wayne_Remnant_Vortex.txt, phase: RV}
+  ace_end_h: 504                         # end of the tropical-cyclone stage
+
+  rapid_intensification: true
+
+  peaks:
+    - h: 132.0
+      lon: 118.40
+      lat: 23.20
+      label: 'PEAK 1   85 kt / 965 hPa'
+      color: [255, 214, 130]
+      summary: '85 kt / 965 hPa - 08-21 12Z'
+      graph: 'P1'
+      pano_dx: 140
+      pano_dy: -90
+    - h: 408.0
+      lon: 121.90
+      lat: 19.50
+      label: 'PEAK 2   85 kt / 965 hPa'
+      color: [255, 158, 226]
+      summary: '85 kt / 965 hPa - 09-02 00Z'
+      graph: 'P2'
+      pano_dx: 140
+      pano_dy: 40
+    - h: 456.0
+      lon: 116.80
+      lat: 18.90
+      label: 'PEAK 3   90 kt / 960 hPa'
+      color: [170, 226, 255]
+      summary: '90 kt / 960 hPa - 09-04 00Z'
+      graph: 'P3'
+      pano_dx: 40
+      pano_dy: -100
+      strong: '90 kt / 960 hPa'
+
+  # five landfalls; every one is TS..C2, so the ordinary impact set is used
+  landfall_file: landfall.txt
+  landfalls:
+    Taiwan:   {place: Taiwan,              off_y: -96, simple_dx: 120, simple_dy: -96, color: [255, 196, 120]}
+    Babuyan:  {place: Babuyan Is., PH,     off_y: 56,  simple_dx: 130, simple_dy: 20,  color: [255, 176, 214]}
+    Dalupiri: {place: Dalupiri I., PH,     off_y: 118, simple_dx: 140, simple_dy: 96,  color: [255, 200, 190]}
+    Hainan:   {place: Hainan, CN,          off_y: -96, simple_dx: 120, simple_dy: -70, color: [255, 214, 170]}
+    Vietnam:  {place: Nghe An, Vietnam,    off_y: 46,  simple_dx: 130, simple_dy: 60,  color: [220, 240, 140]}
+
+  # regional figures follow the Hong Kong Observatory record; Hong Kong's own
+  # loss is three orders of magnitude below the 亿 scale, so it prints its unit
+  damage:
+    - {cn: 台湾,     en: Taiwan,      lon: 120.30, lat: 23.70, dead:  63, lost: 0, loss: '12.43'}
+    - {cn: 越南,     en: Vietnam,     lon: 106.30, lat: 20.30, dead: 400, lost: 0, loss: '6.08'}
+    - {cn: 菲律宾,   en: Philippines, lon: 121.20, lat: 18.30, dead:  36, lost: 0, loss: '0.4454'}
+    - {cn: 中国大陆, en: China,       lon: 110.30, lat: 20.00, dead:   5, lost: 0, loss: '1.93'}
+    - {cn: 香港,     en: Hong Kong,   lon: 114.17, lat: 22.30, dead:   3, lost: 0, loss: '0.00077', loss_text: '7.7万(CNY)'}
+    - {cn: 泰国,     en: Thailand,    lon: 101.00, lat: 17.80, dead:   2, lost: 0, loss: '0.0138',  loss_text: '138万(CNY)'}
+
+damage:
+  min_gap: 0.70
+  popup_duration: 1.6
+  spread: 90
+
+view:
+  tracking_span_lon: 22.8
+  panorama: auto
+  warp: auto
+
+# no satellite loop was supplied for this storm
+
+banner:
+  headline: 'WP131986   TYPHOON WAYNE   韦恩'
+  loss: CNY 1.378 bn
+  deaths: '490'
+
+audio:
+  landfall_h: 0
+  xt_h: 0
+  weaken: false
+
+summary:
+  note: 全球汇总 490 死为常见口径，各区域独立统计相加为 509 死
+  sources: JTWC best track - Hong Kong Observatory 1986
+  phase2_label: DISSIPATED
+  phase2_value: Laos - 08-31 00Z to 09-06 06Z
+  damage_label: DAMAGE  死亡 / 经济损失
+  damage_lines:
+    - 台湾 63 死 / 越南 400 死 - CNY18.51 亿
+    - 菲律宾 36 / 大陆 5 / 香港 3 / 泰国 2 - CNY2.40 亿
+    - 全球汇总 490 死 - CNY13.78 亿（区域相加 509 死）
+
+credits:
+  - 素材包   SMCY1.3   -   麦块姚是屑
+  - 视频制作   Nekobenzene & DeepSeek V4.1 Flash
