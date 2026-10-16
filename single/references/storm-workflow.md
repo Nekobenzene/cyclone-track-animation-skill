@@ -115,7 +115,8 @@ Create `<work root>\single\<Storm>\sourcedata\` and put in it:
    is removed. Leave unknown fields blank; preserve blank lines so the fields
    do not shift. The naming timestamp is line 3 (Python index 2).
 3. **`hypo.txt`** - `True` for a fictional storm, `False` for a real one. It
-   overrides `storm.hypothetical`, and only affects the intro card.
+   overrides `storm.hypothetical`; it selects the default intro title only when
+   no explicit `intro_title` or `title` is present.
    `storm.ef_rating: true` is a separate, storm-specific joke: while the system
    holds SSHWS C3 or above the badge reads `EF n` instead of `CATEGORY n` and the
    CMA grade reads 强龙卷风 in italic. Only Dujuan uses it, because of its 4 km
@@ -176,8 +177,9 @@ documented in `storm-pipeline.md` §2. The parts that need real thought:
 
 * `paths.storm` - the storm folder; everything else defaults from it.
 * `data.series` - the txt file names **relative to `sourcedata`**.
-* `storm.hypothetical` - set it for a fictional storm: the intro then reads
-  `hypoTY <NAME>` and `假想台风<中文名>`. Leave it off for a real one.
+* `storm.hypothetical` - marks a fictional storm (overridden by `hypo.txt`).
+  Authored intro text is verbatim: set `storm.intro_title` and `storm.intro_line`
+  to include the desired fictional label; the flag never edits configured copy.
 * `data.peaks` - **list every local maximum in the intensity series**, not just
   the strongest one or two. Read the curve (or let a script find the local
   maxima) and give each an hour, position, label and `pano_dy`; a 3+ peak storm
@@ -386,8 +388,10 @@ the `info` point count is the check.
     would let a cosmetic choice perturb a scientific statistic. ACE samples the
     raw fixes on the 00/06/12/18Z grid. If the on-screen ACE ever disagrees with a
     direct sum from the source file, the renderer is wrong, not the data.
-25. **The intro never says TYPHOON.** Real storms read `CYCLONE`, hypothetical
-    ones `hypoTC`, and the second line says 热带气旋 (假想热带气旋 when fictional).
+25. **Intro copy is explicit.** Prefer `CYCLONE <NAME>` / 热带气旋 for real storms
+    and `hypoTC <NAME>` / 假想热带气旋 for fictional ones in authored configs.
+    `intro_title` overrides `title` for the opening only; `intro_line` is verbatim.
+    The renderer never replaces words or adds fictional qualifiers to either line.
 26. **Rapid intensification is a window test on the smoothed curve, not a
     band-count test.** A burst that gains one SSHWS band at a time is still rapid
     intensification. Flag every 6 h window gaining >= 20 kt, and every 24 h window

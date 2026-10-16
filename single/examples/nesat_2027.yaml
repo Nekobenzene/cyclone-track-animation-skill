@@ -15,15 +15,16 @@ output:
   poster: 2027_Typhoon_Nesat_Poster.png
 
 storm:
-  hypothetical: true                 # fictional scenario -> intro says hypoTY / 假想台风
+  hypothetical: true                 # fictional flag; opening text below is explicit
   id: WP162027
   name_en: NESAT
   name_cn: 纳沙
   name_cn_long: 台风纳沙
   title: TYPHOON NESAT
+  intro_title: hypoTC NESAT
   subtitle: 2027 - WESTERN NORTH PACIFIC - WP162027（假想情景）
   source_line: HYPOTHETICAL SCENARIO - NOT A REAL EVENT
-  intro_line: 台风纳沙  -  2027  -  WESTERN NORTH PACIFIC
+  intro_line: 假想热带气旋纳沙  -  2027  -  WESTERN NORTH PACIFIC
   intro_footer: 假想情景  HYPOTHETICAL SCENARIO   |   SMCY1.3
   credit_line: DATA  hypothetical scenario supplied with the project - NOT a real event
 

@@ -3088,22 +3088,16 @@ def banner_line2():
             % (best, S.ace_total, _c('banner.loss', 'n/a'), _c('banner.deaths', 'n/a')))
 
 def intro_title():
-    """the intro never says TYPHOON: real storms read CYCLONE, hypothetical ones
-    read hypoTC (spec rule 8)"""
-    s = _S.get('title', 'CYCLONE')
-    s = s.replace('TYPHOON', 'CYCLONE').replace('Typhoon', 'Cyclone')
-    if _S.get('hypothetical'):
-        s = s.replace('CYCLONE', 'hypoTC').replace('Cyclone', 'hypoTC')
-    return s
+    """Configured copy is verbatim; only a missing title gets a default."""
+    if 'intro_title' in _S:
+        return _S['intro_title']
+    if 'title' in _S:
+        return _S['title']
+    return 'hypoTC' if _S.get('hypothetical') else 'CYCLONE'
 
 def intro_name_line():
-    """台风 -> 热带气旋; a hypothetical storm keeps the 假想 prefix (spec rule 8)"""
-    s = _S.get('intro_line', '')
-    if _S.get('hypothetical') and '台风' in s:
-        s = s.replace('台风', '假想热带气旋', 1)
-    elif '台风' in s:
-        s = s.replace('台风', '热带气旋', 1)
-    return s
+    """The authored name line already includes any desired phase or qualifier."""
+    return _S.get('intro_line', '')
 
 def lifetime_label():
     """the end card states the tropical-cyclone stage only: the disturbance,

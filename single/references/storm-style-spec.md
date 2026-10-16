@@ -192,8 +192,8 @@ Black, logo centred, three lines fading in at 0.9 s / 1.8 s / 2.6 s:
 
 | line | y | content |
 |---|---|---|
-| title | 690 | `CYCLONE <NAME>` at Arial Bold 60, tracked; **`hypoTC <NAME>` for a hypothetical storm**. The intro never says TYPHOON (spec rule 8) |
-| name | 762 | `<热带气旋 / 假想热带气旋><中文名> - <year> - WESTERN NORTH PACIFIC`, mixed fonts, 25 px |
+| title | 690 | `storm.intro_title` (fallback `storm.title`), verbatim, Saira Bold 60, tracked. Recommended authored copy: `CYCLONE <NAME>` / `hypoTC <NAME>`. If neither field exists, use `CYCLONE` / `hypoTC` according to hypothetical status. |
+| name | 762 | `storm.intro_line`, verbatim (empty when absent), mixed fonts, 25 px. Recommended copy: `<热带气旋 / 假想热带气旋><中文名> - <year> - WESTERN NORTH PACIFIC`. |
 | footer | 828 | `intro_footer`, mixed fonts, 15 px |
 
 Every one of the three goes through the mixed CJK/Latin helper - a Chinese

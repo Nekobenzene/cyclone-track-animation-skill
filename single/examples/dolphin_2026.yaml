@@ -22,9 +22,10 @@ storm:
   name_cn: 白海豚
   name_cn_long: 台风白海豚
   title: TYPHOON DOLPHIN
+  intro_title: CYCLONE DOLPHIN
   subtitle: 2026 - WESTERN NORTH PACIFIC - WP122026
   source_line: JTWC BEST TRACK - DAPIYA BW IMAGERY
-  intro_line: 台风白海豚  -  2026  -  WESTERN NORTH PACIFIC
+  intro_line: 热带气旋白海豚  -  2026  -  WESTERN NORTH PACIFIC
   intro_footer: JTWC BEST TRACK   |   DAPIYA BW CLOUD   |   SMCY1.3
   credit_line: DATA  JTWC best track - cloud imagery dapiya.cn - 应急管理部
 

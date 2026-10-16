@@ -20,9 +20,10 @@ storm:
   name_cn: 莫兰蒂           # banner / summary short form
   name_cn_long: 台风莫兰蒂   # HUD + intro form
   title: TYPHOON MERANTI
+  intro_title: CYCLONE MERANTI
   subtitle: 2016 - WESTERN NORTH PACIFIC - WP172016
   source_line: JTWC BEST TRACK + JMA POST-ANALYSIS
-  intro_line: 台风莫兰蒂  -  2016  -  WESTERN NORTH PACIFIC
+  intro_line: 热带气旋莫兰蒂  -  2016  -  WESTERN NORTH PACIFIC
   intro_footer: JTWC BEST TRACK + JMA POST-ANALYSIS   |   HIMAWARI-8 B13   |   SMCY1.3
   credit_line: DATA  JTWC best track - JMA post-analysis (Digital Typhoon) - 民政部 / 农委会 / NDRRMC
   note: 注：BestTrack 官方给出 170 kt / 895 hPa 单峰   # low-key note near the peak

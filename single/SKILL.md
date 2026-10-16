@@ -65,6 +65,15 @@ else is frozen, so two storms rendered months apart look identical.
 
 ## Notes
 
+* Intro copy is verbatim: `storm.intro_title` overrides `storm.title` for the
+  opening only; otherwise the opening uses `storm.title`. Only when both fields
+  are absent does it default to `hypoTC` (hypothetical) or `CYCLONE` (real).
+  `storm.intro_line` is displayed unchanged and defaults to empty. Explicit empty
+  strings hide the corresponding text. Include any desired 假想/HYPOTHETICAL
+  wording in the copy itself; `hypo.txt`/`storm.hypothetical` never rewrites it.
+  Existing configs that relied on automatic wording must now state the desired
+  opening explicitly. Keep HUD `title` separate by setting `intro_title`.
+
 * The renderer must stay self-contained: no shared module, no import of any other
   project file. If a second renderer needs the same helper, copy the code into it.
 * The style is the contract. `references/storm-style-spec.md` and the rules in

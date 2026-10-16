@@ -141,12 +141,12 @@ storm:
   name_en:     MERANTI
   name_cn:     莫兰蒂                # 简称，用于 banner
   name_cn_long: 台风莫兰蒂           # HUD 副标题 + 开场
-  hypothetical: true                 # 虚构情景：开场卡片显示
-                                     # hypoTY / 假想台风，而不是 TYPHOON / 台风
+  hypothetical: true                 # 标记虚构情景，不改写显式文案
   title:       TYPHOON MERANTI       # HUD 右上角 + 开场 + 摘要页眉
+  intro_title: hypoTC MERANTI        # 仅开场；未设置时沿用 title，原样显示
   subtitle:    2016 - WESTERN NORTH PACIFIC - WP172016
   source_line: JTWC BEST TRACK + JMA POST-ANALYSIS     # HUD 标题下方
-  intro_line:  台风莫兰蒂  -  2016  -  WESTERN NORTH PACIFIC
+  intro_line:  假想热带气旋莫兰蒂  -  2016  -  WESTERN NORTH PACIFIC
   intro_footer: JTWC BEST TRACK + JMA POST-ANALYSIS   |   HIMAWARI-8 B13   |   SMCY1.3
   credit_line: DATA  JTWC best track - ...             # 底部居中
 
@@ -319,10 +319,10 @@ ffmpeg -v error -y -i cloud.mp4 -vf "select='$sel',crop=300:18:2:2,scale=440:26,
 
 ## 5. 常见陷阱
 
-0. **假想风暴会自我声明。** 设置 `storm.hypothetical: true` 后，开场卡片的
-   大标题显示 `hypoTY ...` 而不是 `TYPHOON ...`，第二行显示
-   `假想台风...`。其他一切不变，因此真实风暴和虚构风暴可以并排
-   存在而不会被互相认错。
+0. **开场文案原样显示。** `storm.intro_title` 优先于 `storm.title`；两者都
+   未设置时才按 hypothetical 默认显示 `hypoTC` 或 `CYCLONE`。
+   `storm.intro_line` 未设置时为空。显式空字符串可隐藏对应文字。
+   假想风暴请在配置中写好标识，渲染器不会追加“假想”或替换“台风”。
 1. **地图投影。** 底图是**以太平洋为中心**的：`x = lonE/360*10800`，
    `y = (90-lat)/180*5400`。按 `-180..180` 处理会使一切偏移 180°，track
    会落到空旷洋面上。在信任某一帧之前，先用一个已知城市验证。

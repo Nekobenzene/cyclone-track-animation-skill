@@ -19,9 +19,10 @@ storm:
   name_cn: 海贝思
   name_cn_long: 台风海贝思
   title: TYPHOON HAGIBIS
+  intro_title: CYCLONE HAGIBIS
   subtitle: 2019 - WP202019 - 令和元年東日本台風
   source_line: JTWC BEST TRACK + JMA POST-ANALYSIS
-  intro_line: 台风海贝思  -  2019  -  WESTERN NORTH PACIFIC
+  intro_line: 热带气旋海贝思  -  2019  -  WESTERN NORTH PACIFIC
   intro_footer: JTWC BEST TRACK + JMA POST-ANALYSIS   |   HIMAWARI-8 B13   |   SMCY1.3
   credit_line: DATA  JTWC best track - JMA post-analysis (Digital Typhoon) - 消防庁 / 内閣府 / 国交省
 

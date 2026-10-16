@@ -27,9 +27,10 @@ storm:
   name_cn:     中文名             # short, used on the panorama banner
   name_cn_long: 台风中文名          # HUD subtitle + intro
   title:       TYPHOON NAME
+  intro_title: CYCLONE NAME
   subtitle:    20XX - WESTERN NORTH PACIFIC - WP000000
   source_line: JTWC BEST TRACK + JMA POST-ANALYSIS
-  intro_line:  台风中文名  -  20XX  -  WESTERN NORTH PACIFIC
+  intro_line:  热带气旋中文名  -  20XX  -  WESTERN NORTH PACIFIC
   intro_footer: JTWC BEST TRACK + JMA POST-ANALYSIS   |   HIMAWARI-8 B13   |   SMCY1.3
   credit_line: DATA  JTWC best track - JMA post-analysis (Digital Typhoon) - 民政部 / 农委会 / NDRRMC
 

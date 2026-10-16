@@ -22,9 +22,10 @@ storm:
   name_cn: 韦恩
   name_cn_long: 台风韦恩
   title: TYPHOON WAYNE
+  intro_title: CYCLONE WAYNE
   subtitle: 1986 - WESTERN NORTH PACIFIC - WP131986
   source_line: JTWC BEST TRACK - HONG KONG OBSERVATORY
-  intro_line: 台风韦恩  -  1986  -  WESTERN NORTH PACIFIC
+  intro_line: 热带气旋韦恩  -  1986  -  WESTERN NORTH PACIFIC
   intro_footer: JTWC BEST TRACK   |   HONG KONG OBSERVATORY 1986   |   SMCY1.3
   credit_line: DATA  JTWC best track - Hong Kong Observatory, Meteorological Results 1986
 

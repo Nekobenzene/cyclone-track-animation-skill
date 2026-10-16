@@ -14,9 +14,10 @@ storm:
   name_cn: 杜鹃
   name_cn_long: 台风杜鹃
   title: TYPHOON DUJUAN
+  intro_title: CYCLONE DUJUAN
   subtitle: 2026 - WESTERN NORTH PACIFIC - WP242026
   source_line: IBTrACS ACTIVE (PROVISIONAL)
-  intro_line: 台风杜鹃  -  2026  -  WESTERN NORTH PACIFIC
+  intro_line: 热带气旋杜鹃  -  2026  -  WESTERN NORTH PACIFIC
   intro_footer: IBTrACS ACTIVE CLOUD   |   SMCY1.3
   credit_line: DATA  IBTrACS v04r01 ACTIVE (provisional tcvitals) - NCEI
   ef_rating: true
