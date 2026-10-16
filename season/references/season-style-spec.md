@@ -103,7 +103,7 @@ Every painted part of a track is therefore always shown at full icon opacity.
 | C4 | 113-136 | (232, 34, 28) |
 | C5 | 137-155 | (255, 60, 226) |
 | C5+ | 156-169 | (214, 106, 255) |
-| C5++ | 170+ | a ramp: deep purple -> deep blue at 185 -> black at 200 |
+| C5++ | 170+ | a ramp: deep purple -> deep blue at 185 -> ACE fill endpoint #C6E8FF at 200 |
 
 Phase colours: `DB` (206, 220, 236), `RV` (176, 192, 214), `EX` (152, 172, 214).
 
@@ -293,3 +293,26 @@ Windows font paths. The original Adobe SIL OFL 1.1 license is bundled as
 `LICENSE.txt`; retain it and font copyright notices when distributing.
 Official download URLs and SHA-256 hashes are recorded in `source.json`.
 Font paths are anchored to the skill, independent of project asset overrides.
+
+## High-wind icons
+
+EX retains its original sprite at 30 kt and below. Above 30 kt, smoothly blend
+in recolouring over 30..37 kt, preserving the neutral white core and lettering.
+Sample bright chromatic pixels from four rotation frames of each actual TC
+sprite, including rendered high-wind tints. Place TD through C5+ colours at
+their finite band midpoints and interpolate linearly in RGB without plateaus.
+Keep 170/185 kt purple/blue anchors; at 200 kt sample the rightmost column of
+`gui/ace/ace_color_1000.png` (currently `#C6E8FF`). Preserve authored brightness;
+do not normalize exposure from each frame's histogram. Do not add an outline.
+
+At >=100 kt, EX carries blue-white lightning separated from
+`mainicon/tc_sshws/N-TC-C6(7).mp4`. Compare matching angles across its six turns
+to remove static body/ring edges, protect the centre lettering, and cache
+derived layers at `fx/ex_lightning_gray_v1`. EX never triggers TD-to-TS flash
+or audio, including when the tropical upgrade list is empty.
+
+TC's 185..200 kt theme also interpolates to `#C6E8FF`; season overview tracks
+use the same endpoint. Keep existing TC category transitions and tint rules.
+The TC numeral 5 smoothsteps to black-red `#1E0309` over 185..200 kt through a
+cached mask of the original numeral, applied after glow. Preserve the white
+eye, rings and lightning. Single-only card/banner rules do not apply here.

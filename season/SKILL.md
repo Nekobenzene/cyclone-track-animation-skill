@@ -65,6 +65,15 @@ none of them points into another. If a helper is needed on both sides, copy it.
 
 ## Notes
 
+* EX keeps source art at <=30 kt; above that, use continuous colours sampled
+  from TC band midpoints, preserving the white core and EX lettering. EX never
+  triggers TD-to-TS upgrade FX/audio. At >=100 kt, add lightning extracted from
+  the existing uncoloured C7 asset into the shared cache.
+* TC and EX reach `#C6E8FF` at 200 kt. The TC numeral 5 darkens over 185..200 kt
+  to `#1E0309`. TC category transitions and phase/track/ACE rules stay unchanged.
+  See [the style specification](references/season-style-spec.md#high-wind-icons)
+  for sampling and masking details.
+
 * The style is the contract. `references/season-style-spec.md` and the rules in
   `references/season-workflow.md` win over any local improvement.
 * All three scripts must stay self-contained. `season_overview.py` reads

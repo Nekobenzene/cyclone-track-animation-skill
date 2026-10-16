@@ -112,8 +112,45 @@ pairs with YaHei Bold 27 px).
 * Icon linear size grows **+1 % per kt above 155 kt, cumulatively** (cap 1.32x).
 * The C5+/C5++ tint replaces hue only - the white core stays white so the "5"
   stays readable.
-* **Past 180 kt the theme colour is dark**, so the `CATEGORY 5++` badge text
-  fades to white over 176..182 kt and back below (spec rule 12).
+* **TC high-wind theme:** Keep the purple -> blue ramp through 170..185 kt,
+  then interpolate linearly to the ACE fill's right-edge colour `#C6E8FF` at
+  200 kt and hold it above 200 kt. Apply the same endpoint in single preview
+  and season overview copies. Existing TC category and tint rules remain.
+  Above 185 kt, smoothstep the centre numeral 5 to black-red `#1E0309` at
+  200 kt. Apply after glow through a cached mask from the original C5 numeral,
+  protecting the surrounding white eye, rings, arms and animated lightning.
+* **EX icons:** 30 kt and below retain the authored sprite exactly. Above 30 kt,
+  blend in colours sampled from actual TC sprites over 30..37 kt. Take the median
+  bright chroma from four rotation frames, excluding white/neutral and dark pixels;
+  sample C5+/170/185 kt nodes after applying the TC renderer's own tint. Place
+  TD through C5+ colours at each finite TC band's midpoint; interpolate linearly
+  in RGB between nodes without category plateaus or narrow fade windows. Follow the
+  continuous purple/blue/ACE-fill-endpoint ramp through 170/185/200 kt. Sample
+  the median RGB of the rightmost column in `gui/ace/ace_color_1000.png` for
+  the 200 kt node (currently `#C6E8FF`). Use floating RGB
+  colour, without the TC tint cache's 8-value quantization; feather the chroma
+  mask and preserve neutral white core and EX lettering. This changes only the
+  EX sprite, including during phase crossfades, not track colour or phase rules.
+  Preserve each source pixel's authored brightness; never normalize exposure
+  from a per-frame histogram or median, which makes rotation flash in colour.
+  Do not add a separate high-wind outline to EX sprites.
+  At wind >=100 kt, screen-composite blue-white lightning from the uncoloured
+  C7 clip at the same animation frame. Derive filaments against a six-turn,
+  same-angle neutral baseline; exclude static body edges and the centre numeral.
+  Cache the extracted native-resolution filaments at icon size, preserving the
+  EX lettering. Below 100 kt, skip this layer.
+  EX never triggers the TD-to-TS upgrade flash or sound; an empty `ts_all`
+  list means no event and must not fall back to the unfiltered `ts` crossing.
+* **Single high-wind cards:** Over 185..200 kt, the `CATEGORY 5++` background
+  follows the theme continuously to `#C6E8FF`, and its text smoothsteps from
+  white to `#1E0309`. Below 185 kt retain existing styling, including the
+  176..182 kt text fade. Panorama peak/landfall accents and heading text follow
+  the continuous theme, while other text smoothsteps from its old colour to
+  `#C6E8FF`. Do not switch colour immediately above 185 kt. The summary
+  banner's embedded 5 darkens over 185..200 kt to `#1E0309` using a stable
+  source numeral mask; do not recolour the surrounding eye or lightning.
+  Both summary-banner text lines smoothstep to `#1E0309` over 185..200 kt;
+  fade their shadow out over the same interval.
 
 ## The two intensity cards
 

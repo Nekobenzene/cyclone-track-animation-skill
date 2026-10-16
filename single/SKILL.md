@@ -181,6 +181,20 @@ cache limits, validation and current-source rerender guidance.
 
 ## Preview frame rates and landfall tint
 
+* EX retains its source artwork at <=30 kt; above that, use continuous RGB
+  interpolation through sampled TC band midpoint colours, without plateaus or
+  per-frame exposure normalization. EX never triggers TD-to-TS upgrade FX/audio.
+* TC and EX reach the ACE fill endpoint `#C6E8FF` at 200 kt. TC keeps its
+  existing category transitions. At >=100 kt, EX adds lightning extracted from
+  the existing uncoloured C7 asset into the shared derived cache.
+* Over 185..200 kt, the TC numeral 5 darkens to `#1E0309`. Single's CATEGORY
+  5++ badge, panorama cards and summary banner also transition continuously:
+  pale theme accents, dark-red badge/banner text, and pale panorama-card text
+  at 200 kt. The banner's embedded 5 uses its own stable mask.
+
+See [the style specification](references/storm-style-spec.md) for sampling,
+masking, colour endpoints and exact interpolation rules.
+
 Set `output.fps: 30` with `output.width: 960` and `output.height: 540` for a
 540p30 full-film preview. Output fps accepts integers 1..120 and defaults to
 120. Frames sample the existing 120 fps author timeline, preserving camera

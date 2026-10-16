@@ -20,6 +20,7 @@ Section A usage (unchanged, kept for reference and for single storms):
   python season_pass1.py --config storm.yaml assets|test|render|audio|mux|poster|info|all
 """
 import os, re, sys, math, wave, subprocess, json, shutil
+from functools import lru_cache
 from datetime import datetime, timedelta
 
 # Shared skill runtime; each renderer remains self-contained.
@@ -240,17 +241,17 @@ def level_of(wind, phase):
     if wind < 170: return 'C5+'
     return 'C5++'
 
-C6_BLACK = np.array([0, 0, 0], dtype=np.float32)        # 200 kt and above
+C6_END = np.array([198, 232, 255], dtype=np.float32)        # 200 kt and above
 
 def theme_col(wind, lvl):
     """155 kt+ uses the super-cyclone ramp: pink-purple -> deep blue at 185 kt
-    -> black at 200 kt, linear in between"""
+    -> ACE fill endpoint (#C6E8FF) at 200 kt, linear in between"""
     if lvl == 'C5++':
         if wind <= 185.0:
             t = min(1.0, max(0.0, (wind - 170.0) / 15.0))
             return tuple(int(v) for v in (C5PP_A * (1 - t) + C5PP_B * t))
         t = min(1.0, (wind - 185.0) / 15.0)
-        return tuple(int(v) for v in (C5PP_B * (1 - t) + C6_BLACK * t))
+        return tuple(int(v) for v in (C5PP_B * (1 - t) + C6_END * t))
     return COL.get(lvl, (220, 220, 220))
 
 # --- rule 16: CMA (m/s) + extended Beaufort card ---------------------------
@@ -388,7 +389,7 @@ def build_phases():
     print('  phases: ' + ', '.join('%s->%s @h%.0f' % (a, b, h) for h, a, b in PHASE_BOUNDS))
 
 def _phase_at(h):
-    ph = PHASE_BOUNDS[0][1] if PHASE_BOUNDS else 'TC'
+    ph = PHASE_BOUNDS[0][1] if PHASE_BOUNDS else S.phase[0]
     for hb, pa, pb in PHASE_BOUNDS:
         if h > hb: ph = pb
     return ph
@@ -902,6 +903,11 @@ def build_key():
                 end=S.duration_h)
 
 KEY = {}
+
+def _ts_fx_hours():
+    """An empty upgrade list means no event; EX can never trigger this FX."""
+    return [h for h in KEY.get('ts_all', ()) if _phase_at(h) != 'EX']
+
 
 # ----------------------------------------------------------------------------
 # base map - the basin set in `map/basins/` is the only map source
@@ -1774,6 +1780,177 @@ def icon_pair(wind, ph):
     return level_of(wind, 'TC'), None, 0.0
 
 _tint_cache = {}
+
+
+def _sample_icon_colour(images):
+    """Median bright chroma from rotating art; exclude white text and black."""
+    pixels = []
+    for im in images:
+        rgb = np.asarray(im, dtype=np.float32)
+        value = rgb.max(axis=2)
+        saturation = (value - rgb.min(axis=2)) / np.maximum(value, 1.0)
+        selected = (saturation > 0.2) & (value >= 32.0)
+        if selected.any():
+            cutoff = np.percentile(value[selected], 75)
+            pixels.append(rgb[selected & (value >= cutoff)])
+    if not pixels:
+        raise ValueError('TC reference icon has no usable coloured pixels')
+    return np.median(np.concatenate(pixels), axis=0).astype(np.float32)
+
+
+@lru_cache(maxsize=4)
+def _tc_icon_palette(icon_directory):
+    """Sample actual TC sprites once per asset cache, including rendered tints."""
+    palette = {}
+    for lvl in ('TD', 'TS', 'C1', 'C2', 'C3', 'C4', 'C5', 'C5+', 'C5++', 'blue'):
+        art = 'C5++' if lvl == 'blue' else lvl
+        images = []
+        for nf in (0, 25, 50, 75):
+            im = icon_sprite(art, nf)
+            if lvl in ('C5+', 'C5++', 'blue'):
+                wind = {'C5+': 160.0, 'C5++': 170.0, 'blue': 185.0}[lvl]
+                q = tuple(int(v // 8) * 8 for v in theme_col(wind, art))
+                im = tinted(('ex-reference', art, nf, q), im, q)
+            images.append(im)
+        palette[lvl] = _sample_icon_colour(images)
+    return palette
+
+
+@lru_cache(maxsize=4)
+def _ace_ex_endpoint(asset_directory):
+    """Read the actual ACE fill's right-edge colour for the EX 200 kt node."""
+    path = os.path.join(asset_directory, 'gui', 'ace', 'ace_color_1000.png')
+    with Image.open(path) as image:
+        rgb = np.asarray(image.convert('RGB'), dtype=np.float32)
+    return np.median(rgb[:, -1, :], axis=0)
+
+
+def ex_icon_colour(wind):
+    """Linear RGB interpolation through TC band midpoints, without plateaus."""
+    palette = _tc_icon_palette(ICOND)
+    # C5++ has an open-ended category range; use its authored high-wind
+    # purple/blue/ACE-endpoint anchors rather than the sentinel upper bound (999).
+    nodes = [((lo + hi) / 2.0, palette[lvl]) for lvl, lo, hi in BANDS[:-1]]
+    nodes += [(170.0, palette['C5++']), (185.0, palette['blue']),
+              (200.0, _ace_ex_endpoint(ASSETS))]
+    speeds = [speed for speed, _ in nodes]
+    colours = np.asarray([colour for _, colour in nodes])
+    return np.array([np.interp(wind, speeds, colours[:, channel])
+                     for channel in range(3)], dtype=np.float32)
+
+
+def ex_icon_tinted(im, wind):
+    """Recolour EX chroma continuously, preserving its white core and lettering."""
+    if not np.isfinite(wind) or wind <= 30.0:
+        return im
+    base = np.asarray(im, dtype=np.float32)
+    value = base.max(axis=2)
+    saturation = (value - base.min(axis=2)) / np.maximum(value, 1.0)
+    # Work directly in RGB: HSV's integer hue and TC's 8-value cache bins
+    # produce visible steps during a slow wind ramp.
+    # Keep the authored brightness. A per-frame median changes abruptly as
+    # the arms rotate; its exposure boost clipped orange into flashing yellow.
+    target = value[..., None] * (ex_icon_colour(wind) / 255.0)
+    u = min(1.0, (wind - 30.0) / 7.0)
+    u = u * u * (3.0 - 2.0 * u)
+    # Feather the chroma mask so antialiased halo pixels do not form a hard
+    # coloured contour. Exactly neutral pixels (core, letters, black) stay put.
+    mask = np.clip((saturation - 0.04) / 0.26, 0.0, 1.0)
+    mask = mask * mask * (3.0 - 2.0 * mask)
+    mix = mask[..., None] * u
+    out = base * (1.0 - mix) + target * mix
+    return Image.fromarray(np.rint(out).astype(np.uint8))
+
+
+def _grey_lightning_layer(source, baseline):
+    """Separate dark blue discharge filaments from the neutral C7 artwork."""
+    value = source.min(axis=2)
+    ridge = np.maximum(0.0, cv2.GaussianBlur(value, (0, 0), 1.6) - value)
+    neutral_edges = np.maximum(0.0, cv2.GaussianBlur(baseline, (0, 0), 1.6) - baseline)
+    chroma = np.clip((source[..., 2] - source[..., 0] - 5.0) / 18.0, 0.0, 1.0)
+    h, w = value.shape
+    yy, xx = np.mgrid[:h, :w]
+    radius = np.sqrt((xx - (w - 1) / 2.0)**2 + (yy - (h - 1) / 2.0)**2) / h
+    # Protect EX lettering and exclude the neutral source's number and rings.
+    radial = np.clip((radius - 0.16) / 0.035, 0.0, 1.0)
+    ridge = np.maximum(0.0, ridge - neutral_edges - 3.0) * chroma * radial
+    core = np.clip(ridge * 12.0, 0.0, 255.0)
+    hot = np.clip((ridge - 15.0) * 20.0, 0.0, 255.0)
+    glow = cv2.GaussianBlur(core, (0, 0), 1.1)
+    rgb = np.stack([core*.45 + hot*.55 + glow*.08,
+                    core*.65 + hot*.35 + glow*.15, core + glow*.3], axis=2)
+    # Blur can bleed into the protected centre, so mask the final layer too.
+    rgb *= radial[..., None]
+    return Image.fromarray(np.rint(np.clip(rgb, 0.0, 255.0)).astype(np.uint8))
+
+
+def extract_ex_lightning():
+    """Build a disposable, shared lightning-only cache from uncoloured C7 art."""
+    directory = os.path.join(FXD, 'ex_lightning_gray_v1')
+    complete = os.path.join(directory, 'complete.txt')
+    if os.path.isfile(complete) and all(os.path.isfile(os.path.join(directory, '%04d.png' % i))
+                                          for i in range(N_ICON)):
+        return
+    os.makedirs(directory, exist_ok=True)
+    source = os.path.join(ASSETS, 'mainicon', 'tc_sshws', 'N-TC-C6(7).mp4')
+    metadata = json.loads(subprocess.check_output(['ffprobe', '-v', 'error',
+        '-select_streams', 'v:0', '-show_entries', 'stream=width,height', '-of', 'json', source]))
+    width, height = (int(metadata['streams'][0][k]) for k in ('width', 'height'))
+    raw = subprocess.check_output(['ffmpeg', '-v', 'error', '-i', source, '-vf',
+        r'select=not(mod(n\,3))', '-fps_mode', 'passthrough', '-f', 'rawvideo',
+        '-pix_fmt', 'rgb24', '-'])
+    frames = np.frombuffer(raw, dtype=np.uint8).reshape(-1, height, width, 3)
+    if len(frames) != N_ICON:
+        raise ValueError('Unexpected C7 frame count: %d' % len(frames))
+    turns = int(ICON_TURNS)
+    period = N_ICON // turns
+    # At each rotation angle, the brightest neutral pixel estimates the body
+    # before the dark discharge. It removes static arm/ring edges from detection.
+    baseline = frames.reshape(turns, period, height, width, 3).min(axis=4).max(axis=0)
+    for i, frame in enumerate(frames):
+        layer = _grey_lightning_layer(frame.astype(np.float32),
+                                      baseline[i % period].astype(np.float32))
+        layer = layer.resize((ICON_H, ICON_H), Image.Resampling.LANCZOS)
+        layer.save(os.path.join(directory, '%04d.png' % i))
+    with open(complete, 'w', encoding='utf-8') as marker:
+        marker.write('gray C7, six-turn neutral baseline, native-resolution discharge extraction\n')
+    print('fx EX lightning', N_ICON)
+
+
+def ex_icon_with_lightning(im, nf, wind):
+    if not np.isfinite(wind) or wind < 100.0:
+        return im
+    path = os.path.join(FXD, 'ex_lightning_gray_v1', '%04d.png' % (nf % N_ICON))
+    return ImageChops.screen(im, _asset_frames.get(path, size=im.size))
+@lru_cache(maxsize=8)
+def _tc_digit_mask(icon_directory, size):
+    """Stable mask from the original magenta 5, independent of lightning frames."""
+    source = icon_sprite('C5++', 0).resize(size, Image.Resampling.LANCZOS)
+    rgb = np.asarray(source, dtype=np.float32)
+    value = rgb.max(axis=2)
+    saturation = (value - rgb.min(axis=2)) / np.maximum(value, 1.0)
+    h, w = value.shape
+    yy, xx = np.mgrid[:h, :w]
+    # The numeral occupies the centre; exclude the white eye, rings and bolts.
+    region = ((xx >= w*.43) & (xx <= w*.57) &
+              (yy >= h*.40) & (yy <= h*.59))
+    mask = np.clip((saturation - .18) / .32, 0.0, 1.0)
+    mask *= np.clip((245.0 - value) / 30.0, 0.0, 1.0)
+    return mask * region
+
+
+def tc_digit_tinted(im, wind):
+    """Darken only the TC numeral to black-red over 185..200 kt."""
+    if not np.isfinite(wind) or wind <= 185.0:
+        return im
+    u = float(np.clip((wind - 185.0) / 15.0, 0.0, 1.0))
+    u = u * u * (3.0 - 2.0 * u)
+    mask = _tc_digit_mask(ICOND, im.size)[..., None] * u
+    rgb = np.asarray(im, dtype=np.float32)
+    out = rgb * (1.0 - mask) + np.array([30.0, 3.0, 9.0]) * mask
+    return Image.fromarray(np.rint(out).astype(np.uint8))
+
+
 def glow_strength(wind, lvl):
     """spec: the lower bands carry NO halo, C5++ gets a weak one, and past
     180 kt it grows strong.  Applied as an additive blurred copy, so it is a
@@ -2404,18 +2581,23 @@ class R:
         into a single layer keeps it one sprite on screen, so nothing brightens
         and nothing jumps.
 
-        The tint is restricted to C5+/C5++: the lower bands already carry the
+        TC tint is restricted to C5+/C5++: the lower bands already carry the
         right colour, and running them through `tinted()` brightens their soft
         halo (measured C1 +197 %, C5 +81 %), which reads as a glow nobody asked
-        for.
+        for. EX uses its separate continuous colour rule above 30 kt.
         """
         def spr(lvl):
             s = icon_sprite(lvl, nf)
+            if lvl == 'EX':
+                coloured = ex_icon_tinted(s, wind)
+                return ex_icon_with_lightning(coloured, nf, wind)
             if lvl in ('C5+', 'C5++'):
                 col = theme_col(wind, lvl)
                 q = tuple(int(v // 8) * 8 for v in col)
                 s = tinted((lvl, nf, q), s, q)
                 s = with_glow(s, glow_strength(wind, lvl))
+                if lvl == 'C5++':
+                    s = tc_digit_tinted(s, wind)
             return s
 
         # A phase change - low pressure becoming a remnant vortex or an
@@ -2576,7 +2758,7 @@ class R:
 
         # TD -> TS upgrade flash - one per crossing, not just the first
         tc1 = None
-        for hx in (KEY.get('ts_all') or ([KEY['ts']] if KEY['ts'] is not None else [])):
+        for hx in _ts_fx_hours():
             tx = t_of_hours(hx)
             if tx <= t <= tx + 0.5:
                 tc1 = tx
@@ -3292,7 +3474,7 @@ def build_audio():
             cache[key] = a
         return cache[key]
     # TD -> TS upgrade: one hit per crossing
-    for hx in (KEY.get('ts_all') or []):
+    for hx in _ts_fx_hours():
         add(t_of_hours(hx), sfx('sound/random/note_ts.ogg'), 0.70 * 2 / 3, 0.1)
     # C4 / C5 sustained background (lowered) - a storm that never reaches C4
     # simply has no such bed
@@ -3345,7 +3527,7 @@ def build_audio():
 # drivers
 # ----------------------------------------------------------------------------
 def cmd_assets():
-    extract_icons(); extract_fx(); extract_cloud()
+    extract_icons(); extract_fx(); extract_ex_lightning(); extract_cloud()
 
 def cmd_test():
     os.makedirs(TMP, exist_ok=True)
@@ -3463,11 +3645,12 @@ def main(argv):
         if KEY['w170a'] is None:
             print('  never reaches 170 kt')
         else:
-            print('  w>170 kt from h=%.2f to h=%.2f' % (KEY['w170a'], KEY['w170b']))
+            print('  w>170 kt from h=%.2f to h=%.2f' %
+                  (KEY['w170a'], S.duration_h if KEY['w170b'] is None else KEY['w170b']))
         print('  banner art: %s   peak %.0f kt (%s)'
               % (banner_asset(), peak_wind(), level_of(peak_wind(), 'TC')))
         print('  TD->TS crossings: %s'
-              % (', '.join('h=%.0f' % x for x in (KEY.get('ts_all') or [])) or 'none'))
+              % (', '.join('h=%.0f' % x for x in _ts_fx_hours()) or 'none'))
         def _hv(v):
             return 'n/a' if v is None else 'h=%.2f' % v
         print('  TD->TS %s   TS->C1 %s   C4 %s   C5end %s'
@@ -3609,6 +3792,7 @@ def season_extract_fx():
             ('particle/note_ts.mp4', 'notets', 60),
             ('particle/ERI.gif', 'eri', 10)]
     _season_bind()
+    extract_ex_lightning()
     for rel, name, fps in jobs:
         d = os.path.join(FXD, name)
         if os.path.isdir(d) and len(os.listdir(d)) > 5:
@@ -3929,7 +4113,7 @@ class SeasonR:
         # TD -> TS upgrade flash, once per crossing.  The effect's frame 0 is
         # 0 degrees and the icon turns ICON_TURNS times over N_ICON frames, so
         # the effect is rotated by the icon's angle AT THE TRIGGER, latched.
-        for hx in (KEY.get('ts_all') or []):
+        for hx in _ts_fx_hours():
             tx = self.T.s_of(st['t0'] + _dtm.timedelta(hours=hx))
             if not (tx <= t <= tx + 0.5):
                 continue
@@ -4122,7 +4306,7 @@ def season_audio(storms, T, s0, dur, path):
         def st_of(h):
             return T.s_of(t0 + _dtm.timedelta(hours=h))
 
-        for hx in (KEY.get('ts_all') or []):          # TD -> TS upgrade
+        for hx in _ts_fx_hours():          # TD -> TS upgrade
             add(st_of(hx), sfx('sound/random/note_ts.ogg'), 0.70 * 2 / 3, 0.1)
             ev += 1
         if KEY.get('c4') is not None and KEY.get('c5end') is not None:

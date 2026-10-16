@@ -306,18 +306,18 @@ COL = {'DB': (206, 220, 236), 'TD': (196, 220, 255), 'TS': (58, 226, 92),
        'RV': (176, 192, 214), 'EX': (152, 172, 214)}
 C5PP_A = np.array([126, 44, 176], dtype=np.float32)
 C5PP_B = np.array([40, 74, 178], dtype=np.float32)
-C6_BLACK = np.array([0, 0, 0], dtype=np.float32)
+C6_END = np.array([198, 232, 255], dtype=np.float32)
 
 
 def theme_col(wind, lvl):
     """155 kt+ uses the super-cyclone ramp: pink-purple -> deep blue at 185 kt
-    -> black at 200 kt, linear in between"""
+    -> ACE fill endpoint (#C6E8FF) at 200 kt, linear in between"""
     if lvl == 'C5++':
         if wind <= 185.0:
             t = min(1.0, max(0.0, (wind - 170.0) / 15.0))
             return tuple(int(v) for v in (C5PP_A * (1 - t) + C5PP_B * t))
         t = min(1.0, (wind - 185.0) / 15.0)
-        return tuple(int(v) for v in (C5PP_B * (1 - t) + C6_BLACK * t))
+        return tuple(int(v) for v in (C5PP_B * (1 - t) + C6_END * t))
     return COL.get(lvl, (220, 220, 220))
 
 
