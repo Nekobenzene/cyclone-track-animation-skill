@@ -37,6 +37,32 @@ Asset-relative paths such as `SMCY1.3/map/` default to this skill's `assets/SMCY
 Keep each project's inputs, build files and outputs inside that project;
 use `<work>/res/_cache` for shared extracted media.
 
+## Installing the asset pack from the GitHub repository
+
+The published repository tracks code, documentation and tooling only. The
+SMCY1.3 asset pack, the fonts and the portable runtime are GitHub Release
+attachments, because four files in them exceed GitHub's 100 MB push limit.
+After cloning, install them before rendering:
+
+```text
+python tools/fetch_assets.py --list          # what is available and how big
+python tools/fetch_assets.py                 # default packs (~1.4 GB download)
+python tools/fetch_assets.py --pack map,icons,fx,font   # skip the portable runtime
+```
+
+`fetch_assets.py` verifies the archive's SHA-256 and then every extracted file
+against `assets.manifest.json` before moving anything into place, so an
+interrupted run cannot leave a half-installed skill; re-running repairs it.
+`--base <directory-or-URL>` installs from a mirror or from manually downloaded
+zips, and `--verify-only` re-checks an existing install. An installation that
+came from a complete skill archive already contains everything and needs no
+fetch.
+
+The `runtime` pack holds Windows x64 CPython 3.12 libraries. The renderers put
+`runtime/python` on `sys.path` whenever that folder exists, so on a 3.10 or 3.14
+interpreter install with `--pack map,icons,fx,font` and use your own
+dependencies (`pip install -r requirements.txt`) instead.
+
 ## Bundled resources shared by single and season
 
 ```text

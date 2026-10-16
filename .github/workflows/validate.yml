@@ -1,0 +1,62 @@
+name: validate
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  repo:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Renderer sources compile
+        run: |
+          python -m compileall -q single/scripts season/scripts scripts tools
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+        shell: pwsh
+
+      - name: Manifest is well formed and self-consistent
+        run: |
+          python - <<'PY'
+          import hashlib, json, pathlib, sys
+          m = json.loads(pathlib.Path("assets.manifest.json").read_text(encoding="utf-8"))
+          problems = []
+          for name, pack in m["packs"].items():
+              if not pack["file"].endswith(".zip"):
+                  problems.append(f"{name}: odd file name {pack['file']}")
+              if pack["file_count"] != len(pack["files"]):
+                  problems.append(f"{name}: file_count does not match the file list")
+              if pack["uncompressed_bytes"] != sum(f["bytes"] for f in pack["files"]):
+                  problems.append(f"{name}: byte total does not match the file list")
+              for f in pack["files"]:
+                  if len(f["sha256"]) != 64:
+                      problems.append(f"{name}: bad hash for {f['path']}")
+              if not pack["sha256"] or len(pack["sha256"]) != 64:
+                  problems.append(f"{name}: bad archive hash")
+          listed = {p for p in m["default_packs"]} | {p for p in m["optional_packs"]}
+          if listed != set(m["packs"]):
+              problems.append("default_packs + optional_packs does not cover every pack")
+          if problems:
+              print("\n".join(problems)); sys.exit(1)
+          t = m["totals"]
+          print(f"ok: {t['packs']} packs, {t['file_count']} files, "
+                f"default install {t['default_zip_bytes']/2**30:.2f} GiB")
+          PY
+        shell: bash
+
+      - name: Fetch tool answers --list without downloading
+        run: python tools/fetch_assets.py --list
+
+      - name: No tracked build artefacts
+        run: |
+          $bad = git ls-files | Select-String -Pattern '(__pycache__|\.pyc$|^dist/|^assets/SMCY1\.3/|^runtime/(python|bin)/|^bin/typhoon/)'
+          if ($bad) { Write-Error "these should never be tracked:`n$bad"; exit 1 }
+          Write-Host "clean"
+        shell: pwsh
