@@ -78,6 +78,20 @@ python tools\publish_release.py --pack fx      # 只补某个包
 `publish_release.py` 走 REST API，不依赖 `gh` CLI；已存在且大小一致的附件会跳过，
 所以断点续传是"重跑一次"。上传大文件耗时取决于上行带宽，单个附件不要超过 2 GB。
 
+token 的三条来源（按顺序取）：`--token-file`、环境变量 `GH_TOKEN`、环境变量 `GITHUB_TOKEN`。
+如果本机 Git Credential Manager 已经存过 GitHub 凭据（`git push` 不需要输密码就说明有），
+可以直接取出复用，不必再新建一枚：
+
+```powershell
+$out = "protocol=https`nhost=github.com`n`n" | git credential fill
+($out | Select-String '^password=').Matches.Groups[1].Value | Set-Content ..\.gh_token -NoNewline
+python tools\publish_release.py --token-file ..\.gh_token
+Remove-Item ..\.gh_token          # 用完即删，别留在工作区
+```
+
+企业网络下 GitHub 直连不通时，给 `--proxy` 传本地代理（`git push` 用
+`git -c http.proxy=http://127.0.0.1:<port> push`）。
+
 ## 5. 发布前验收
 
 在本机另建一个干净目录，走使用者路径，不要复用已有素材：
