@@ -536,10 +536,18 @@ The self-contained single script carries local copies of season pass 1's
 world-map crop and trail painter. It selects the basin by covered-area ratio,
 unions its bounds with the track plus 5-degree padding (10 degrees south),
 grows the window to 16:9, and samples `map/basins/EARTH.png`. Intensity colours,
-phase blending and dashed remnant tracks follow the season still. No icons,
-fix dots, HUD or summary cards are drawn. The preview path has no black outline and uses 30% of its original coloured-stroke width; animation paths are unchanged. Shared code is copied with a
+phase blending and track patterns follow the single animation rules in
+[Single track appearance](../../references/track-data.md#single-track-appearance).
+No icons, fix dots, HUD or summary cards are drawn. The preview path has no black outline and uses 30% of its original coloured-stroke width. Shared code is copied with a
 `_preview_` prefix, never imported from another skill branch. This framing is
 for the still; the animation's existing camera is unchanged.
+
+Black-background preview is optional and available at any time with
+`preview-black` instead of `preview`, or via `scripts/preview_black.py --project
+<project>` / `--config <yaml>`. It writes `output/preview_black.png` with the
+same framing and native density, without decoding map pixels or effects.
+It never overwrites the map preview and is not run automatically by `render`
+or `all`; do not make it a mandatory workflow step.
 
 ## 1080p120 output and missing identities
 

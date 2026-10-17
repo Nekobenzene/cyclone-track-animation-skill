@@ -308,10 +308,18 @@ single 的 ACE 仅计算 TC 段内 00/06/12/18 UTC 且风速 ≥34 kt 的采样�
 | 命令 | 查看内容 |
 |---|---|
 | `preview` | 按原地图像素密度输出完整路径静态图，尺寸可能大于视频 |
+| `preview-black` | 可选的纯黑底路径预览，输出 `output/preview_black.png`；随时可调用，不是渲染前置步骤 |
 | `test` | 关键时刻的动画检查帧 |
 | `poster` | 峰值附近的代表画面 |
 
 检查路径、取景、字体、时间和事件位置。结尾 `panorama: auto` 自动把路径放在两侧卡片之间、顶部概要条下方。
+
+需要检查路径配色和线型时，随时运行 `& $Exe single $SingleProject preview-black`。
+也可用源码工具 `python single/scripts/preview_black.py --project <项目目录>`，
+或传入 `--config <YAML>`。黑底版沿用普通 preview 的取景与分辨率，
+不加载地图像素，也不替换 `preview.png`；`render` / `all` 不自动生成黑底版。
+single 中只有 aL/DB、MV、MD、RV 用虚线，SD、SS、TC、EX 用实线；
+配色见 [轨迹规则](references/track-data.md#single-track-appearance)。
 
 ### 第三步：渲染与交付
 

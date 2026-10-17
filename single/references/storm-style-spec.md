@@ -3,6 +3,11 @@
 Rendered from `typhoon_anim.py`. Any change here changes every storm's
 look, so treat this file as the contract.
 
+Track family colours and dashed/solid patterns follow
+[Single track appearance](../../references/track-data.md#single-track-appearance).
+The same rules apply to the animation, map preview and optional black preview.
+Black preview is available on demand and is never required before rendering.
+
 ## Output
 
 | | |

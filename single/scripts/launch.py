@@ -6,7 +6,7 @@ def main(argv=None, renderer_module=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('project', type=Path)
     parser.add_argument('command', nargs='?', default='all',
-                        choices=['all','info','preview','assets','render','audio','mux','poster','test'])
+                        choices=['all','info','preview','preview-black','assets','render','audio','mux','poster','test'])
     parser.add_argument('--assets', type=Path, help='Shared SMCY1.3 asset folder')
     args = parser.parse_args(argv)
     shared = Path(os.environ.get('TYPHOON_SKILL_ROOT') or Path(__file__).resolve().parents[2])

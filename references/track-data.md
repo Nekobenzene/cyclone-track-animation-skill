@@ -1,5 +1,26 @@
 # Path data and type transitions
 
+## Single track appearance
+
+Only aL/DB, MV, MD and RV use dashed tracks. SD, SS, TC and EX use solid
+tracks. The animation and both preview backgrounds share these rules.
+
+| Type | Track colour | Pattern |
+|---|---|---|
+| aL / DB | neutral white `#E0E4EA` | dashed |
+| MV | ice cyan `#A4E0E8` | short dashes |
+| MD | yellow `#EEE040` | long dashes |
+| SD | pale yellow `#E6EC98` | solid |
+| SS | yellow green `#BCF230` | solid |
+| TC | existing intensity palette | solid |
+| EX | lavender through 30 kt, then continuous TC midpoint and extreme-wind colours with a 20% lavender bias | solid |
+| RV | neutral grey `#A4AEC0` | dashed |
+
+SD/SS still changes at 34 kt regardless of the input token. Phase transitions
+blend the colours. These are track-specific colours; icon assets and HUD colours
+remain controlled by their own rules. EX keeps a lavender bias to distinguish
+it from TC while following the same broad intensity hues.
+
 ## Disturbance and subtropical paths
 
 `DB.txt`, `DB-LO.txt` and `DB-aL.txt` select the tropical disturbance aL art.

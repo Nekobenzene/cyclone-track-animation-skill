@@ -11,7 +11,7 @@ The visual style (layout, fonts, colours, timings, panel geometry) is FROZEN -
 see references/storm-style-spec.md. Only the storm-specific values come from a config
 file; everything else is shared so every storm looks identical.
 
-usage:  python typhoon_anim.py --config storm.yaml preview|assets|test|render|audio|mux|poster|info|all
+usage:  python typhoon_anim.py --config storm.yaml preview|preview-black|assets|test|render|audio|mux|poster|info|all
 """
 import os, re, sys, math, wave, subprocess, json, shutil
 from datetime import datetime, timedelta
@@ -280,6 +280,68 @@ def theme_col(wind, lvl):
         t = min(1.0, (wind - 185.0) / 15.0)
         return tuple(int(v) for v in (C5PP_B * (1 - t) + C6_END * t))
     return COL.get(lvl, (220, 220, 220))
+
+# Track colours follow the icon families; dash patterns distinguish related hues.
+TRACK_COL = {'DB': (224, 228, 234), 'MV': (164, 224, 232),
+             'MD': (238, 224, 64), 'SD': (230, 236, 152),
+             'SS': (188, 242, 48), 'RV': (164, 174, 192)}
+TRACK_PATTERNS = {'DB': (16, 11), 'MV': (9, 6),
+                  'MD': (26, 10), 'RV': (16, 11)}
+
+
+def track_theme_col(wind, lvl):
+    if lvl in TRACK_COL:
+        return TRACK_COL[lvl]
+    if lvl == 'EX':
+        # Neutral lavender at <=30 kt, then continuous TC midpoint colours.
+        nodes = [(30, (180, 180, 230)), (48.5, COL['TS']),
+                 (73, COL['C1']), (89, COL['C2']), (104, COL['C3']),
+                 (124.5, COL['C4']), (146, COL['C5']), (162.5, COL['C5+']),
+                 (170, tuple(C5PP_A)), (185, tuple(C5PP_B))] + HIGHWIND_BODY
+        # Retain the EX family's lavender bias even where TC uses the same hue.
+        nodes = [nodes[0]] + [(speed, tuple(int(round(c * 0.8 + tint * 0.2))
+                                           for c, tint in zip(colour, (170, 150, 235))))
+                             for speed, colour in nodes[1:]]
+        return palette_colour(wind, nodes)
+    return theme_col(wind, lvl)
+
+
+def track_state_color(wind, weights):
+    total = sum(weights.values()) or 1.0
+    return tuple(int(sum(wt / total * track_theme_col(wind, lvl)[c]
+                         for lvl, wt in weights.items())) for c in range(3))
+
+
+def draw_track_segments(draw, points, colours, phases, width, pattern_scale=1.0,
+                        fixed_colour=None):
+    """Carry dash distance across samples so fine sampling cannot erase gaps."""
+    previous_phase, slot, distance = None, 0, 0.0
+    for i in range(1, len(points)):
+        phase = phases[i]
+        pattern = TRACK_PATTERNS.get(phase)
+        if phase != previous_phase:
+            slot, distance = 0, 0.0
+            previous_phase = phase
+        colour = fixed_colour if fixed_colour is not None else colours[i] + (255,)
+        a, b = points[i-1], points[i]
+        if pattern is None:
+            draw.line([a, b], fill=colour, width=width)
+            continue
+        length = math.hypot(b[0]-a[0], b[1]-a[1])
+        offset = 0.0
+        while offset < length - 1e-9:
+            target = pattern[slot] * pattern_scale
+            step = min(target - distance, length - offset)
+            if slot % 2 == 0 and step > 1e-9:
+                p = tuple(a[c] + (b[c]-a[c]) * offset / length for c in (0, 1))
+                q = tuple(a[c] + (b[c]-a[c]) * (offset+step) / length for c in (0, 1))
+                draw.line([p, q], fill=colour, width=width)
+            offset += step
+            distance += step
+            if distance >= target - 1e-9:
+                slot = (slot + 1) % len(pattern)
+                distance = 0.0
+
 
 # --- rule 16: CMA (m/s) + extended Beaufort card ---------------------------
 # The mapping is the unit conversion the agency chart draws (JTWC kt row aligned
@@ -2277,7 +2339,7 @@ class BannerFrames:
 @lru_cache(maxsize=4096)
 def trail_point(h):
     lo, la, wind, _, _, _ = sample(h)
-    return lo, la, state_color(h, wind, state_weights(h, wind))
+    return lo, la, track_state_color(wind, state_weights(h, wind))
 
 
 class R:
@@ -2408,34 +2470,14 @@ class R:
         for (hh, _, _) in pts:
             cols.append(trail_point(hh)[2])
         xy = [proj(p[1], p[2]) for p in pts]
-        if len(xy) > 1:
-            # split into solid / dashed runs: the derived remnant-vortex phase
-            # is dashed (never hard-code its hour window - it moves per storm)
-            def is_rv(i):
-                return _phase_at(pts[i][0]) == 'RV'
-            runs = []
-            cur = [0]
-            for i in range(1, len(pts)):
-                if is_rv(i) != is_rv(i - 1):
-                    runs.append((is_rv(i - 1), cur + [i]))
-                    cur = [i - 1]
-                cur.append(i)
-            runs.append((is_rv(len(pts) - 1), cur))
-            for rv, idx in runs:
-                if len(idx) < 2: continue
-                rp = [xy[k] for k in idx]
-                if rv:
-                    self.dashed(d, rp, (0, 0, 0, 110), 12)
-                    self.dashed(d, rp, cols[idx[-1]] + (255,), 6)
-                else:
-                    d.line(rp, fill=(0, 0, 0, 120), width=12, joint='curve')
-                    for a, b in zip(idx[:-1], idx[1:]):
-                        d.line([xy[a], xy[b]], fill=cols[b] + (255,), width=6)
+        phases = [_phase_at(point[0]) for point in pts]
+        draw_track_segments(d, xy, cols, phases, 12, fixed_colour=(0, 0, 0, 120))
+        draw_track_segments(d, xy, cols, phases, 6)
         for i in range(len(S.hours)):
             if S.hours[i] > hours: break
             x, y = proj(S.lon[i], S.lat[i])
             w_i = float(np.interp(S.hours[i], S.ihours, S.iwind))
-            c = state_color(S.hours[i], w_i, state_weights(S.hours[i], w_i))
+            c = track_state_color(w_i, state_weights(S.hours[i], w_i))
             d.ellipse([x - 4, y - 4, x + 4, y + 4], fill=(10, 14, 22, 220),
                       outline=c + (255,), width=2)
 
@@ -3961,7 +4003,7 @@ def _preview_state_weights(ps, h, w):
     return base
 
 def _preview_phase_at(ps, h):
-    ph = ps.PHASE_BOUNDS[0][1] if ps.PHASE_BOUNDS else 'TC'
+    ph = ps.PHASE_BOUNDS[0][1] if ps.PHASE_BOUNDS else ps.S.phase[0]
     for hb, pa, pb in ps.PHASE_BOUNDS:
         if h > hb:
             ph = pb
@@ -3971,7 +4013,7 @@ def _preview_state_color(ps, h, w, sw):
     c = np.zeros(3, dtype=np.float32)
     tot = sum(sw.values()) or 1.0
     for lvl, wt in sw.items():
-        c += wt / tot * np.array(_preview_theme_col(w, lvl), dtype=np.float32)
+        c += wt / tot * np.array(track_theme_col(w, lvl), dtype=np.float32)
     return tuple((int(v) for v in np.clip(c, 0, 255)))
 
 def _preview_sample(ps, h):
@@ -4025,8 +4067,8 @@ def _preview_trail(ps, ov, hours, proj, sc, trail_mul):
     """pass 1's `trail()` with the fix markers left out.
 
     The preview-only trail uses 30% of the original width: no outer stroke, intensity-coloured inner
-    stroke whose colour is sampled continuously, and the remnant-vortex phase
-    dashed.  Only the per-fix black discs are gone.
+    stroke whose colour is sampled continuously and whose patterns distinguish
+    the cyclone families. Per-fix markers are omitted.
     """
     S = ps.S
     d = ImageDraw.Draw(ov)
@@ -4045,27 +4087,9 @@ def _preview_trail(ps, ov, hours, proj, sc, trail_mul):
         _, _, ww, _, _, _ = _preview_sample(ps, hh)
         cols.append(_preview_state_color(ps, hh, ww, _preview_state_weights(ps, hh, ww)))
     xy = [proj(p[1], p[2]) for p in pts]
-    if len(xy) > 1:
+    phases = [_preview_phase_at(ps, point[0]) for point in pts]
+    draw_track_segments(d, xy, cols, phases, w_in)
 
-        def is_rv(i):
-            return _preview_phase_at(ps, pts[i][0]) == 'RV'
-        runs = []
-        cur = [0]
-        for i in range(1, len(pts)):
-            if is_rv(i) != is_rv(i - 1):
-                runs.append((is_rv(i - 1), cur + [i]))
-                cur = [i - 1]
-            cur.append(i)
-        runs.append((is_rv(len(pts) - 1), cur))
-        for rv, idx in runs:
-            if len(idx) < 2:
-                continue
-            rp = [xy[k] for k in idx]
-            if rv:
-                _preview_dashed(d, rp, cols[idx[-1]] + (a_in,), w_in)
-            else:
-                for a, b in zip(idx[:-1], idx[1:]):
-                    d.line([xy[a], xy[b]], fill=cols[b] + (a_in,), width=w_in)
 
 def _preview_style_scale(win, W, ps):
     """the renderer's own line-weight rule:
@@ -4075,8 +4099,8 @@ def _preview_style_scale(win, W, ps):
     ppd = W / float(win[1] - win[0])
     return ppd / (1920.0 / 22.8)
 
-def cmd_preview():
-    """Write output/preview.png without decoding effects or encoding video."""
+def cmd_preview(black_background=False):
+    """Write a track preview without decoding effects or encoding video."""
     ps = sys.modules[__name__]
     width, height = 1920, 1080
     extent = (float(S.lon.min()), float(S.lon.max()),
@@ -4088,16 +4112,19 @@ def cmd_preview():
     width = max(1, int(round((window[1] - window[0]) * source['ppd'])))
     height = max(1, int(round((window[3] - window[2]) * source['ppd'])))
     print('  native preview %dx%d at %.1f px/deg' % (width, height, source['ppd']))
-    maps = _preview_MapSource(ps, ASSETS, basin, ss=1)
+    maps = None if black_background else _preview_MapSource(ps, ASSETS, basin, ss=1)
     try:
-        frame = Image.fromarray(maps.crop(*window, width, height)).convert('RGBA')
+        frame = (Image.new('RGBA', (width, height), (0, 0, 0, 255))
+                 if black_background else
+                 Image.fromarray(maps.crop(*window, width, height)).convert('RGBA'))
         projection = _preview_make_proj(*window, width, height)
         layer = Image.new('RGBA', frame.size, (0, 0, 0, 0))
         scale = _preview_style_scale(window, width, ps)
         _preview_trail(ps, layer, float(S.duration_h), projection, scale, 3.0)
         frame.alpha_composite(layer)
-        path = os.path.join(OUTDIR, 'preview.png')
-        temporary = os.path.join(OUTDIR, 'preview.pending.png')
+        stem = 'preview_black' if black_background else 'preview'
+        path = os.path.join(OUTDIR, stem + '.png')
+        temporary = os.path.join(BUILD, stem + '.pending.png')
         try:
             frame.convert('RGB').save(temporary, format='PNG')
             os.replace(temporary, path)
@@ -4107,7 +4134,8 @@ def cmd_preview():
               ((path, basin['name']) + tuple(window)))
         return path
     finally:
-        maps.im.close()
+        if maps is not None:
+            maps.im.close()
 
 def cmd_assets():
     extract_icons(); extract_fx(); extract_ex_lightning(); extract_cloud()
@@ -4229,6 +4257,8 @@ def main(argv):
            S.duration_h, S.ace_total))
     if cmd == 'preview':
         cmd_preview()
+    elif cmd == 'preview-black':
+        cmd_preview(black_background=True)
     elif cmd == 'assets':
         cmd_assets()
     elif cmd == 'test':

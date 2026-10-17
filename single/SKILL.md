@@ -52,6 +52,24 @@ OS, rebuild the skill runtime with compatible package wheels and FFmpeg tools.
 
 ## Use
 
+The black preview is optional: generate it on request or whenever it helps
+inspect track colours and patterns. It is not a prerequisite for rendering,
+and `render`/`all` do not generate it automatically. It uses the same framing,
+resolution and track colours as the normal map preview:
+
+```text
+python scripts/preview_black.py --project <project>
+python scripts/preview_black.py --config <storm.yaml>
+../bin/typhoon/typhoon.exe single <project> preview-black
+../bin/typhoon/typhoon.exe single-config --config <storm.yaml> preview-black
+```
+
+It writes `output/preview_black.png`, without loading map pixels or extracting
+effects. Basin metadata and the shared runtime are still used. Existing
+`preview.png` is preserved. The standalone utility and executable command use
+the same renderer implementation. Track colours and dashed/solid family rules
+are documented in [Single track appearance](../references/track-data.md#single-track-appearance).
+
     python scripts/typhoon_anim.py --config examples/template.yaml assets
     python scripts/typhoon_anim.py --config examples/template.yaml render
     python scripts/typhoon_anim.py --config examples/template.yaml audio

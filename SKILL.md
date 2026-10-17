@@ -9,6 +9,11 @@ description: SMCY1.3-style tropical-cyclone animations in independent folders th
 
 数据规则见 [路径格式与变性](references/track-data.md)；200–500 kt 调色与登陆尺寸上限见 [极端强度规则](references/extreme-intensity.md)。
 
+single 可随时调用 `single <project> preview-black` 生成黑底路径预览；
+这是可选工具，不是渲染前置步骤，`render` / `all` 不自动生成它。
+源码独立入口及用法见 [single/SKILL.md](single/SKILL.md#use)，轨迹配色与线型见
+[Single track appearance](references/track-data.md#single-track-appearance)。
+
 | folder | what it renders | start here |
 |---|---|---|
 | `single/` | one storm: follow camera, intensity-coloured track, animated category icons, ACE bar, damage pop-ups, panorama, summary banner | `single/SKILL.md` |
