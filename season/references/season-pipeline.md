@@ -162,3 +162,5 @@ cards、它们的模型和数字格式见 `season-cards.md`；
 
 `python -u` 很重要：没有它，管道会缓冲，日志会一连几分钟空着，
 看起来就像卡死了。
+
+Path inputs: see [unified and legacy track rules](../../references/track-data.md). A type file may have time gaps occupied by other type files; merge fixes by timestamp, never by whole-file time ranges.

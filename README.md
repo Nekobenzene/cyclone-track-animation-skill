@@ -165,7 +165,7 @@ single 的输入在 `<project>/sourcedata/`；season 的输入在 `<project>/sou
 | `RV.txt` | 残余涡旋 | 四种路径任选至少一种 |
 | `EX.txt` | 温带气旋 | 四种路径任选至少一种 |
 
-只提供实际存在的阶段。每个有效路径点占一行，固定五列数量（注释可删）：
+旧版多文件方式只需提供实际存在的阶段，每个路径点的前五列如下；也可使用下面的统一 `track.txt` 格式：
 
 ```text
 # UTC时间          经度    纬度    风速kt  气压hPa
@@ -184,6 +184,20 @@ single 的输入在 `<project>/sourcedata/`；season 的输入在 `<project>/sou
 | 中心最低气压 | hPa |
 
 每个气旋建议至少两个按时间排列的有效点，并提供可用风速、气压。多阶段可按 DB → TC （→ RV） → EX 的生命史顺序衔接，记录不重叠。采样间隔由实际时间决定，常见 3 小时和 6 小时资料都可使用。
+
+推荐将完整路径放进 `sourcedata/track.txt`，第六列记录类型。支持逐行标注，或仅在首行和类型变化时标注；省略时沿用该文件上一行的类型：
+
+```text
+20260101000000 140 15 20 1005 DB
+20260101060000 140 15 30 1002 TC
+20260101120000 140 15 25 1005 RV
+20260101180000 140 15 30 1002 TC
+20260102000000 140 15 35 1000
+```
+
+类型可用 `DB、MV、MD、TC、RV、EX、ST`。TC 按实时风速显示 TD／TS／各等级；ST 按 34 kt 显示 SD／SS，也接受 `SD`、`SS` 作为副热带类型标注。类型从标注行的时间起生效；ACE 仅累计 TC 段。`track.txt` 首行必须指定类型。
+
+存在 `track.txt` 时优先读取它，不再读取旧文件或 YAML 的 `data.series`。没有它时继续兼容旧版多文件输入，以及 `DB-LO.txt`／`DB-aL.txt`、`DB-MV.txt`、`DB-MD.txt`、`SD.txt`、`SS.txt`。旧文件也可选填第六列，以文件类型为初始默认值。
 
 single 支持通过 YAML `data.series` 指定其他文件名及阶段；例如自定义路径文件 `Cyclone.txt`：
 
@@ -427,3 +441,23 @@ python "$SkillRoot\scripts\build_exe.py"
 - [season 使用约定](season/SKILL.md)
 - [season 制作规则](season/references/season-workflow.md)
 - [season 数据层](season/references/season-cards.md)
+
+### 多文件的时间交错
+
+同一类型文件中的时间可以不连续。读取器先合并所有文件的点，再按时间排序。
+例如 TC.txt 有 01-01 00Z 和 01-02 00Z，RV.txt 有 01-01 06Z、12Z、18Z，
+得到的顺序是 TC → RV → RV → RV → TC；不会将整个 TC.txt 的首尾范围算作 TC。
+类型可以反复转换，ACE 只累计合并后实际属于 TC 的时次。
+同一时间戳的重复点必须有一致的数据和类型，否则报错，请保留一条明确记录。
+
+`MV.txt`、`MD.txt` 可直接使用，分别等同于 `DB-MV.txt`、`DB-MD.txt`。
+
+### 图标、升格与极端强度
+
+按路径当前纬度选择 N/S 系列图标（南纬使用 S）。MV 使用东风波图标，MD 使用季风低压图标；ST／SD／SS 按实时风速低于或达到 34 kt 分别显示 SD／SS。
+
+增强时进入 TS 或 SS，均播放升格动画与音效，来源类型不限；风速已经超过 34 kt 后再变性进入也会触发。SS 动画使用图标的黄绿色。减弱或风速持平时不触发。
+
+200–300 kt 使用异常路线的连续配色；300–500 kt 主体缓慢趋向冷白，外晕经紫、蓝紫、青、薄荷绿到酸黄绿，中心保持暗红黑色数字 5。登陆特效尺寸在 200 kt 封顶，实际强度继续用于颜色和统计。
+
+详见 [路径格式与变性](references/track-data.md) 和 [极端强度调色](references/extreme-intensity.md)。

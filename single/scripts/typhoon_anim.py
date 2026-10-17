@@ -224,7 +224,14 @@ LABEL = {'DB': 'TROPICAL DISTURBANCE  热带扰动', 'TD': 'TROPICAL DEPRESSION'
          'C5+': 'CATEGORY 5+', 'C5++': 'CATEGORY 5++',
          'RV': 'REMNANT VORTEX  残余涡流', 'EX': 'EXTRATROPICAL  温带气旋'}
 
+COL.update({'MV': COL['DB'], 'MD': COL['TD'], 'SD': COL['TD'], 'SS': COL['TS']})
+LABEL.update({'MV': 'TROPICAL WAVE  东风波', 'MD': 'MONSOON DEPRESSION  季风低压',
+              'SD': 'SUBTROPICAL DEPRESSION  副热带低压',
+              'SS': 'SUBTROPICAL STORM  副热带风暴'})
+
 def level_of(wind, phase):
+    if phase in ('SD', 'SS'):
+        return 'SD' if wind < 34 else 'SS'
     if phase != 'TC':
         return phase
     if wind < 34:  return 'TD'
@@ -237,12 +244,36 @@ def level_of(wind, phase):
     if wind < 170: return 'C5+'
     return 'C5++'
 
-C6_END = np.array([198, 232, 255], dtype=np.float32)        # 200 kt and above
+C6_END = np.array([198, 232, 255], dtype=np.float32)        # 200 kt anchor
+
+
+HIGHWIND_BODY = [(200, (198,232,255)), (220, (192,255,244)),
+                 (240, (223,255,154)), (260, (255,230,186)),
+                 (280, (255,208,229)), (300, (241,221,255)),
+                 (350, (234,223,255)), (400, (228,237,255)),
+                 (450, (233,250,255)), (500, (244,246,255))]
+HIGHWIND_HALO = [(200, (198,232,255)), (220, (192,255,244)),
+                 (240, (223,255,154)), (260, (255,209,110)),
+                 (280, (255,150,210)), (300, (183,108,255)),
+                 (350, (113,96,255)), (400, (54,223,255)),
+                 (450, (100,255,199)), (500, (216,255,82))]
+
+
+def palette_colour(wind, nodes):
+    return tuple(int(round(np.interp(wind, [p[0] for p in nodes],
+                                     [p[1][c] for p in nodes]))) for c in range(3))
+
+
+def highwind_halo_colour(wind):
+    return palette_colour(wind, HIGHWIND_HALO)
+
 
 def theme_col(wind, lvl):
     """155 kt+ uses the super-cyclone ramp: pink-purple -> deep blue at 185 kt
     -> ACE fill endpoint (#C6E8FF) at 200 kt, linear in between"""
     if lvl == 'C5++':
+        if wind > 200.0:
+            return palette_colour(wind, HIGHWIND_BODY)
         if wind <= 185.0:
             t = min(1.0, max(0.0, (wind - 170.0) / 15.0))
             return tuple(int(v) for v in (C5PP_A * (1 - t) + C5PP_B * t))
@@ -309,14 +340,13 @@ def _italic_mixed(base, xy, s, f_ascii, f_cjk, fill):
     f = f_cjk
     tmp = Image.new('RGBA', (int(mixed_w(ImageDraw.Draw(base), s, f_ascii, f_cjk)) + 40, 40),
                     (0, 0, 0, 0))
-    mixed(ImageDraw.Draw(tmp), (4, 0), s, f_ascii, f_cjk, fill, 0.0)
+    text_in_box(ImageDraw.Draw(tmp), (4, 0, tmp.width - 20, 24),
+                s, f_ascii, f_cjk, fill)
     shear = 0.22
     w, h = tmp.size
     out = tmp.transform((w + int(shear * h), h), Image.AFFINE,
                         (1, shear, -shear * h, 0, 1, 0), resample=Image.BICUBIC)
-    # land the glyphs inside the card: the mixed helper draws from the top of the
-    # line box, so composite a touch above the nominal y
-    base.alpha_composite(out, (int(xy[0]), int(xy[1]) + 2))
+    base.alpha_composite(out, (int(xy[0]), int(xy[1])))
 
 
 def _lerp_rgb(a, b, u):
@@ -330,11 +360,11 @@ def theme_dim(wind):
     return max(0.20, 1.0 - 0.80 * min(1.0, (wind - 185.0) / 15.0))
 
 def landfall_scale(wind):
-    """>155 kt landfalls grow by 5 % of linear size per knot.  This applies to the
+    """>155 kt landfalls grow by 5 % per knot, capped at 200 kt.  This applies to the
     impact effect only - the `Landed` marker is never scaled (spec rule 13)."""
     if wind <= 155.0:
         return 1.0
-    return 1.0 + (wind - 155.0) * 0.05
+    return 1.0 + (min(wind, 200.0) - 155.0) * 0.05
 
 # --- smooth (gradual) level transitions -------------------------------------
 BANDS = [('TD', 0, 33), ('TS', 34, 63), ('C1', 64, 82), ('C2', 83, 95),
@@ -371,7 +401,7 @@ def band_index(w):
 
 def _phase_side(ph, w):
     """weights contributed by one side of a phase boundary"""
-    return intensity_weights(w) if ph == 'TC' else {ph: 1.0}
+    return intensity_weights(w) if ph == 'TC' else {level_of(w, ph): 1.0}
 
 def build_phases():
     """phase boundaries: midpoint between the last fix of one phase and the first
@@ -380,14 +410,15 @@ def build_phases():
     PHASE_BOUNDS = []
     for i in range(1, len(S.hours)):
         if S.phase[i] != S.phase[i - 1]:
-            PHASE_BOUNDS.append(((float(S.hours[i - 1]) + float(S.hours[i])) / 2.0,
+            PHASE_BOUNDS.append((float(S.hours[i]) if S.phase_at_fix[i] else
+                                 (float(S.hours[i - 1]) + float(S.hours[i])) / 2.0,
                                  S.phase[i - 1], S.phase[i]))
     print('  phases: ' + ', '.join('%s->%s @h%.0f' % (a, b, h) for h, a, b in PHASE_BOUNDS))
 
 def _phase_at(h):
     ph = PHASE_BOUNDS[0][1] if PHASE_BOUNDS else S.phase[0]
     for hb, pa, pb in PHASE_BOUNDS:
-        if h > hb: ph = pb
+        if h >= hb: ph = pb
     return ph
 
 def state_weights(h, w):
@@ -400,7 +431,7 @@ def state_weights(h, w):
             for k, v in _phase_side(pb, w).items(): out[k] = out.get(k, 0.0) + v * t
             return out
     ph = _phase_at(h)
-    base = intensity_weights(w) if ph == 'TC' else {ph: 1.0}
+    base = intensity_weights(w) if ph == 'TC' else {level_of(w, ph): 1.0}
     # Inside a rapid-intensification window the band change should read as
     # sudden, so the crossfade is sharpened.  It is NOT replaced by a blend to
     # the window's target level: with the 6 h / 24 h window test an event can run
@@ -531,6 +562,24 @@ def mixed_top(d, xy, s, f_ascii, f_cjk, fill, tr=0.0):
     f0 = f_cjk if has_cjk else f_ascii
     return mixed_base(d, (x, y + f0.getmetrics()[0]), s, f_ascii, f_cjk, fill, tr)
 
+
+def text_in_box(d, box, text, f_ascii, f_cjk, fill, tr=0.0, centre=False):
+    """Align visible glyphs, not font ascenders; shrink only overflowing rows."""
+    x0, y0, x1, y1 = box
+    while True:
+        runs = [(run, f_cjk if cjk else f_ascii) for run, cjk in _runs(text)]
+        bounds = [d.textbbox((0, 0), run, font=f, anchor='ls') for run, f in runs]
+        top = min((b[1] for b in bounds), default=0)
+        bottom = max((b[3] for b in bounds), default=0)
+        width = mixed_w(d, text, f_ascii, f_cjk, tr)
+        if (width <= x1 - x0 and bottom - top <= y1 - y0) or min(f_ascii.size, f_cjk.size) <= 8:
+            break
+        f_ascii = f_ascii.font_variant(size=f_ascii.size - 1)
+        f_cjk = f_cjk.font_variant(size=f_cjk.size - 1)
+    x = x0 + (x1 - x0 - width) / 2 if centre else x0
+    baseline = (y0 + y1 - top - bottom) / 2
+    mixed_base(d, (x, baseline), text, f_ascii, f_cjk, fill, tr)
+
 def tracked(d, xy, s, fnt, fill, tr=0.0):
     x, y = xy
     for ch in s:
@@ -647,7 +696,26 @@ def parse_fix_time(tok):
 # segment files, in life-cycle order; the short names win, the long ones remain
 # supported so every shipped storm keeps loading
 SEGMENTS = [('DB', 'Disturbance'), ('TC', 'BestTrack'),
-            ('RV', 'Remnant_Vortex'), ('EX', 'Extratropical')]
+            ('RV', 'Remnant_Vortex'), ('EX', 'Extratropical'),
+            ('DB-LO', 'DB-LO'), ('DB-aL', 'DB-aL'), ('DB-MV', 'DB-MV'),
+            ('DB-MD', 'DB-MD'), ('MV', 'Tropical_Wave'), ('MD', 'Monsoon_Depression'), ('SD', 'Subtropical_Depression'), ('SS', 'Subtropical_Storm')]
+
+def normalize_phase(value):
+    value = value.upper()
+    aliases = {'DB-LO': 'DB', 'DB-AL': 'DB', 'DB-MV': 'MV', 'DB-MD': 'MD',
+               'ST': 'SD', 'TD': 'TC', 'TS': 'TC',
+               **{k: 'TC' for k in ('C1', 'C2', 'C3', 'C4', 'C5', 'C5+', 'C5++')}}
+    value = aliases.get(value, value)
+    if value not in ('DB', 'MV', 'MD', 'TC', 'RV', 'EX', 'SD', 'SS'):
+        raise ValueError('Unknown cyclone type: %s' % value)
+    return value
+
+
+def segment_phase(filename, fallback='TC'):
+    stem = os.path.splitext(os.path.basename(filename))[0].upper()
+    return {'DB': 'DB', 'DB-LO': 'DB', 'DB-AL': 'DB',
+            'DB-MV': 'MV', 'DB-MD': 'MD', 'MV': 'MV', 'MD': 'MD', 'SD': 'SD', 'SS': 'SS'}.get(stem, fallback)
+
 
 def find_segment(short, long):
     """prefer <SHORT>.txt, else any file ending _<Long>.txt"""
@@ -667,6 +735,9 @@ def auto_series():
     `EX.txt` for a storm that never transitioned) is skipped rather than
     contributing a zero-point segment.
     """
+    track = os.path.join(SRC, 'track.txt')
+    if os.path.isfile(track):
+        return [dict(file='track.txt')]
     out = []
     for short, long in SEGMENTS:
         p = find_segment(short, long)
@@ -675,7 +746,7 @@ def auto_series():
         if not has_data_rows(p):
             print('  segment %s is empty - skipped' % os.path.basename(p))
             continue
-        out.append(dict(file=os.path.basename(p), phase=short))
+        out.append(dict(file=os.path.basename(p), phase=segment_phase(p, short)))
     return out
 
 def has_data_rows(path):
@@ -693,35 +764,54 @@ def has_data_rows(path):
 class Series:
     """full life cycle, piecewise phase - built from the config's series list"""
     def __init__(self):
-        def rd(p):
+        def rd(p, default):
             out = []
-            for ln in open(os.path.join(SRC, p), encoding='utf-8'):
-                t = ln.split()
-                if len(t) < 5 or t[0].startswith('#'):
-                    continue          # blank, or a comment line in a data file
-                # a densified PATH fix may carry no intensity at all
-                # ("N/A"), so wind and pressure are parsed separately
-                def num(s):
-                    return float('nan') if s.strip().upper() in ('N/A', 'NA', '-', '') else float(s)
-                out.append([parse_fix_time(t[0]),
-                            float(t[1]), float(t[2]), num(t[3]), num(t[4])])
+            current = default
+            for line_no, ln in enumerate(open(os.path.join(SRC, p), encoding='utf-8-sig'), 1):
+                t = ln.split('#', 1)[0].split()
+                if not t:
+                    continue
+                if len(t) not in (5, 6):
+                    raise ValueError('%s:%d: expected 5 or 6 columns' % (p, line_no))
+                if len(t) == 6:
+                    try:
+                        current = normalize_phase(t[5])
+                    except ValueError as exc:
+                        raise ValueError('%s:%d: %s' % (p, line_no, exc)) from exc
+                if current is None:
+                    raise ValueError('%s:%d: first track fix must specify its type' % (p, line_no))
+                def num(v):
+                    return float('nan') if v.upper() in ('N/A', 'NA', '-') else float(v)
+                point = [parse_fix_time(t[0]), float(t[1]), float(t[2]), num(t[3]), num(t[4])]
+                out.append((point, current, len(t) == 6))
             return out
-        specs = _D.get('series') or auto_series()
+        track = os.path.join(SRC, 'track.txt')
+        specs = [dict(file='track.txt')] if os.path.isfile(track) else (_D.get('series') or auto_series())
         if not specs:
-            raise SystemExit('no track files: give data.series, or put '
-                             'DB.txt / TC.txt (RV.txt, EX.txt) in sourcedata')
-        blocks = []
+            raise SystemExit('no track files: provide track.txt or data.series / legacy phase files')
+        raw = []
         for sp in specs:
-            pts = rd(sp['file'])
+            unified = os.path.basename(sp['file']).lower() == 'track.txt'
+            default = None if unified else normalize_phase(segment_phase(sp['file'], sp.get('phase', 'TC')))
+            pts = rd(sp['file'], default)
             sf = int(sp.get('skip_first', 0) or 0)
             sl = int(sp.get('skip_last', 0) or 0)
-            if sl: pts = pts[sf:len(pts) - sl]
-            elif sf: pts = pts[sf:]
-            blocks.append((pts, sp.get('phase', 'TC')))
-        t0 = blocks[0][0][0][0]
-        raw = []
-        for pts, phase in blocks:
-            raw += [(p, phase) for p in pts]
+            pts = pts[sf:len(pts) - sl if sl else None]
+            raw.extend((point, phase, unified or explicit) for point, phase, explicit in pts)
+        raw.sort(key=lambda r: r[0][0])
+        merged = []
+        for record in raw:
+            if merged and record[0][0] == merged[-1][0][0]:
+                old = merged[-1]
+                if old[1] != record[1] or not np.allclose(old[0][1:], record[0][1:], equal_nan=True):
+                    raise ValueError('Conflicting fixes at %s' % record[0][0])
+                continue
+            merged.append(record)
+        raw = merged
+        if not raw:
+            raise ValueError('No track fixes remain after reading / trimming input')
+        t0 = raw[0][0][0]
+        self.phase_at_fix = [r[2] for r in raw]
         self.t0 = t0
         self.t     = [r[0][0] for r in raw]
         self.phase = [r[1] for r in raw]
@@ -804,15 +894,10 @@ class Series:
             # off the display curve: plateau easing is a cosmetic choice and
             # must not move a published number
             w_syn = np.interp(syn_h, self.ihours, self.iwind)
-            # Only TC source blocks contribute; DB/RV/EX winds never add ACE.
-            # Use each block's actual time extent, including its endpoint fixes.
-            tc_syn = np.zeros(len(syn_h), dtype=bool)
-            for pts, phase in blocks:
-                if str(phase).upper() != 'TC' or not pts:
-                    continue
-                start = (pts[0][0] - t0).total_seconds() / 3600.0
-                end = (pts[-1][0] - t0).total_seconds() / 3600.0
-                tc_syn |= (syn_h >= start - 1e-6) & (syn_h <= end + 1e-6)
+            # Row type is effective at its timestamp, including repeated TC/RV cycles.
+            indices = np.clip(np.searchsorted(self.hours, syn_h, side='right') - 1,
+                              0, len(self.phase) - 1)
+            tc_syn = np.array([self.phase[i] == 'TC' for i in indices])
             a = np.where(tc_syn & (w_syn >= 34), w_syn ** 2, 0.0) / 1e4
             cum = np.concatenate([[0.0], np.cumsum(a)])
             self.ace = np.interp(self.hours, np.concatenate([[syn_h[0]], syn_h]), cum)
@@ -945,15 +1030,41 @@ def _last_landfall_h():
     if isinstance(lf, list) and lf: return float(lf[-1]['h'])
     return 0.0
 
+def upgrade_hours():
+    """Every strengthening entry into TS or SS, including phase-only entries."""
+    hs = np.arange(0.0, S.duration_h + 0.01, 0.01)
+    hs = hs[hs <= S.duration_h]
+    ws = np.asarray(S.WF(hs), dtype=float)
+    candidates = [float(hb) for hb, _pa, _pb in PHASE_BOUNDS]
+    for i in np.where((ws[:-1] < 34.0) & (ws[1:] >= 34.0))[0]:
+        lo, hi = float(hs[i]), float(hs[i + 1])
+        for _ in range(32):
+            mid = (lo + hi) / 2.0
+            if float(S.WF(mid)) < 34.0:
+                lo = mid
+            else:
+                hi = mid
+        candidates.append(hi)
+    events = []
+    for h in sorted(candidates):
+        eps = 1e-4
+        before, after = max(0.0, h - eps), min(S.duration_h, h + eps)
+        w0, w1 = float(S.WF(before)), float(S.WF(after))
+        old = level_of(w0, _phase_at(before))
+        new = level_of(w1, _phase_at(after))
+        if new in ('TS', 'SS') and old != new and w1 > w0 + 1e-7:
+            if not events or h - events[-1] > 1e-5:
+                events.append(h)
+    return events
+
+
 def build_key():
     peaks = _D.get('peaks') or []
     return dict(disturbance=0.0, ts=cross(34, True), c1=cross(64, True),
                 c4=cross(113, True), c5end=cross(113, False),
                 peak1=peaks[0]['h'] if peaks else 0.0,
                 peak2=peaks[1]['h'] if len(peaks) > 1 else S.duration_h,
-                ts_all=crossings(34.0, True,
-                                 skip_phases=tuple(_D.get('ts_fx_skip_phases',
-                                                          ['EX']))),
+                ts_all=upgrade_hours(),
                 w170a=cross(170, True), w170b=cross(170, False),
                 landfall=float(_c('audio.landfall_h', 0.0)) or _last_landfall_h(),
                 xt=float(_c('audio.xt_h', S.duration_h)),
@@ -962,8 +1073,8 @@ def build_key():
 KEY = {}
 
 def _ts_fx_hours():
-    """An empty upgrade list means no event; EX can never trigger this FX."""
-    return [h for h in KEY.get('ts_all', ()) if _phase_at(h) != 'EX']
+    """TC and subtropical 34 kt upgrades share this FX; EX never triggers it."""
+    return [h for h in KEY.get('ts_all', ()) if _phase_at(h) in ('TC', 'SD', 'SS')]
 
 
 # ----------------------------------------------------------------------------
@@ -1042,8 +1153,21 @@ ICON_FPS, N_ICON = 20, 600
 # over that loop; we keep every third frame, so 600 frames still = 6 turns
 ICON_TURNS = 6.0
 
+ICONS.update({'MV': ('disturbance/N-DB-aWV.mp4', True),
+              'MD': ('disturbance/N-TD-MD.mp4', True),
+              'SD': ('extratropicals/N-EX-SD.mp4', True),
+              'SS': ('extratropicals/N-EX-SS.mp4', True)})
+
+def icon_jobs():
+    jobs = dict(ICONS)
+    if S is not None and np.any(S.lat < 0):
+        jobs.update({'S_' + k: (rel.replace('N-', 'S-'), flag)
+                     for k, (rel, flag) in ICONS.items()})
+    return jobs
+
+
 def extract_icons():
-    for k, (rel, _) in ICONS.items():
+    for k, (rel, _) in icon_jobs().items():
         src = os.path.join(ASSETS, 'mainicon', rel.replace('/', os.sep))
         d = os.path.join(ICOND, k.replace('+', 'p'))
         if os.path.isdir(d) and len(os.listdir(d)) >= N_ICON - 2:
@@ -1196,7 +1320,6 @@ def build_hud():
     panel(d, P_TL)
     tracked(d, (66, 50), 'UTC TIME', f_lbl, (236, 243, 252, 255), 3.0)
     tracked(d, (66, 146), 'POSITION', f_lbl, (236, 243, 252, 255), 3.0)
-    tracked(d, (66, 222), 'INTENSITY', f_lbl, (236, 243, 252, 255), 3.0)
 
     f1 = font(F_UI, 60); f2 = font(F_CJK, 30); f3 = font(F_MONO, 20)
     s1 = _S.get('title', 'TYPHOON')
@@ -1674,14 +1797,15 @@ LFX_FADE_PER_KT = 0.005
 
 def landfall_impact_size(wind):
     """Season's exact linear-size rule; persistent Landed markers are unchanged."""
+    wind = min(wind, 200.0)
     fade = max(0.0, 1.0 - LFX_FADE_PER_KT * (LFX_FADE_KT - wind))
     return max(4, int(round(LFX_K * ICON_H * landfall_scale(wind) * fade)))
-def icon_sprite(lvl, phase, wind=None):
+def icon_sprite(lvl, phase, wind=None, hemisphere='N'):
     """square canvas so sprites of different levels can be cross-faded"""
-    key = (lvl, phase)
+    key = (lvl, phase, hemisphere)
     if key in _ic:
         return _ic[key]
-    d = os.path.join(ICOND, lvl.replace('+', 'p'))
+    d = os.path.join(ICOND, ('S_' if hemisphere == 'S' else '') + lvl.replace('+', 'p'))
     p = os.path.join(d, '%04d.png' % (phase % N_ICON))
     im = Image.open(p).convert('RGB')
     r = ICON_H / float(im.height)
@@ -1707,7 +1831,7 @@ def icon_pair(wind, ph):
     on the boundary.
     """
     if ph != 'TC' or not np.isfinite(wind):
-        return ph, None, 0.0
+        return level_of(wind, ph), None, 0.0
     names = [b[0] for b in BANDS]
     starts = [b[1] for b in BANDS[1:]]
     b = min(starts, key=lambda x: abs(x - wind))
@@ -1766,6 +1890,8 @@ def _ace_ex_endpoint(asset_directory):
 
 def ex_icon_colour(wind):
     """Linear RGB interpolation through TC band midpoints, without plateaus."""
+    if wind > 200.0:
+        return np.asarray(palette_colour(wind, HIGHWIND_BODY), dtype=np.float32)
     palette = _tc_icon_palette(ICOND)
     # C5++ has an open-ended category range; use its authored high-wind
     # purple/blue/ACE-endpoint anchors rather than the sentinel upper bound (999).
@@ -1776,6 +1902,34 @@ def ex_icon_colour(wind):
     colours = np.asarray([colour for _, colour in nodes])
     return np.array([np.interp(wind, speeds, colours[:, channel])
                      for channel in range(3)], dtype=np.float32)
+
+
+
+@lru_cache(maxsize=4)
+def _ss_upgrade_colour(icon_directory):
+    source = Image.open(os.path.join(icon_directory, 'SS', '0000.png')).convert('RGB')
+    rgb = np.asarray(source, dtype=np.float32)
+    value = rgb.max(axis=2)
+    saturation = (value - rgb.min(axis=2)) / np.maximum(value, 1.0)
+    coloured = (saturation > 0.65) & (value > 64) & (rgb[..., 1] >= rgb[..., 0])
+    colour = np.median(rgb[coloured], axis=0) if coloured.any() else _sample_icon_colour([source])
+    return colour / max(1.0, float(colour.max()))
+
+
+def upgrade_sprite(im, h):
+    """SS upgrades borrow SS artwork's chroma; retain white cores and luminance."""
+    if _phase_at(h) in ('SD', 'SS'):
+        rgb = np.asarray(im, dtype=np.float32)
+        value = rgb.max(axis=2)
+        saturation = (value - rgb.min(axis=2)) / np.maximum(value, 1.0)
+        mask = np.clip((saturation - 0.04) / 0.26, 0.0, 1.0)
+        mask = mask * mask * (3.0 - 2.0 * mask)
+        target = value[..., None] * _ss_upgrade_colour(ICOND)
+        rgb += (target - rgb) * mask[..., None]
+        im = Image.fromarray(np.rint(np.clip(rgb, 0, 255)).astype(np.uint8))
+    if sample(h)[1] < 0:
+        im = im.transpose(Image.Transpose.FLIP_LEFT_RIGHT)
+    return im
 
 
 def ex_icon_tinted(im, wind):
@@ -1934,7 +2088,7 @@ def icon_tint_colour(wind, lvl):
     """Shared icon/impact tint rule; lower-category artwork keeps its own hue."""
     if lvl not in ('C5+', 'C5++'):
         return None
-    return tuple(int(v // 8) * 8 for v in theme_col(wind, lvl))
+    return theme_col(wind, lvl) if wind > 200 else tuple(int(v // 8) * 8 for v in theme_col(wind, lvl))
 def glow_strength(wind, lvl):
     """spec: the lower bands carry NO halo, C5++ gets a weak one, and past
     180 kt it grows strong.  Applied as an additive blurred copy, so it is a
@@ -1944,7 +2098,7 @@ def glow_strength(wind, lvl):
     return 0.25 + 0.55 * _ramp(wind, 170.0, 184.0)
 
 _glow_cache = {}
-def with_glow(im, s):
+def with_glow(im, s, colour=None, spread=1.0):
     """additive halo that spares the bright core.
 
     A plain add blows the number out past 180 kt, so the blurred copy is only
@@ -1953,12 +2107,18 @@ def with_glow(im, s):
     """
     if s <= 0.01:
         return im
-    key = (id(im), round(s, 2))
+    key = (id(im), round(s, 2), colour, round(spread, 3))
     v = _glow_cache.get(key)
     if v is None:
-        b = im.filter(ImageFilter.GaussianBlur(18))
+        b = im.filter(ImageFilter.GaussianBlur(18 * spread))
         base = np.asarray(im).astype(np.float32)
         g = np.asarray(b).astype(np.float32) * s
+        if colour is not None:
+            g = g.max(axis=2)[..., None] * (np.array(colour, dtype=np.float32) / 255.0)
+            # Keep the eye and its dark 5 clear of the coloured outer halo.
+            yy, xx = np.mgrid[:im.height, :im.width]
+            radial = np.hypot(xx - im.width / 2, yy - im.height / 2) / im.height
+            g *= np.clip((radial - .16) / .12, 0, 1)[..., None]
         head = np.clip((200.0 - base.max(axis=2)) / 200.0, 0.0, 1.0)[..., None]
         v = Image.fromarray(np.clip(base + g * head, 0, 255).astype(np.uint8))
         if len(_glow_cache) > 400:
@@ -2281,6 +2441,8 @@ class R:
 
     def glow(self, ov, cx, cy, wind, col, pulse, fade=1.0):
         d = ImageDraw.Draw(ov)
+        if wind > 200:
+            col = highwind_halo_colour(wind)
         r = 32 + (min(wind, WIND_AXIS) / WIND_AXIS) * 96.0
         for k, a in ((1.9, 10), (1.5, 14), (1.15, 18), (0.88, 22)):
             rr = r * k * (1.0 + 0.012 * pulse)
@@ -2324,8 +2486,9 @@ class R:
         fc = font(F_CJKB, 22)
         bw = mixed_w(d, badge, self.f_badge, fc, 0.0) + 28
         badge_bg, fg = single_badge_colours(wind, lvl, c)
-        d.rounded_rectangle([66, 244, 66 + bw, 278], radius=4, fill=badge_bg + (245,))
-        mixed(d, (66 + 13, 248), badge, self.f_badge, fc, fg + (255,), 0.0)
+        d.rounded_rectangle([66, 239, 66 + bw, 273], radius=4, fill=badge_bg + (245,))
+        text_in_box(d, (79, 243, 66 + bw - 13, 269), badge,
+                    self.f_badge, fc, fg + (255,), centre=True)
         # rule 16: the CMA grade + extended Beaufort force, same card styling,
         # directly under the CATEGORY badge.  The CMA scale itself is never
         # printed - only the force and the Chinese grade.
@@ -2349,11 +2512,12 @@ class R:
         txt = ('%s   %s' % (f_txt, grade)) if f_txt else grade
         fc2 = font(F_CJKM, 20)
         bw2 = mixed_w(d, txt, self.f_badge, fc2, 0.0) + 26
-        d.rounded_rectangle([66, 284, 66 + bw2, 316], radius=4, fill=gcol + (240,))
+        d.rounded_rectangle([66, 279, 66 + bw2, 311], radius=4, fill=gcol + (240,))
         if ef:
-            _italic_mixed(ov, (66 + 12, 288), txt, self.f_badge, fc2, (10, 12, 18, 255))
+            _italic_mixed(ov, (66 + 12, 283), txt, self.f_badge, fc2, (10, 12, 18, 255))
         else:
-            mixed(d, (66 + 12, 288), txt, self.f_badge, fc2, (10, 12, 18, 255), 0.0)
+            text_in_box(d, (78, 283, 66 + bw2 - 12, 307), txt,
+                        self.f_badge, fc2, (10, 12, 18, 255), centre=True)
         # belt and braces: never format a NaN into the badge
         ws = '--' if not np.isfinite(wind) else '%d' % round(wind)
         ps = '--' if not np.isfinite(pres) else '%d' % round(pres)
@@ -2613,15 +2777,19 @@ class R:
         halo (measured C1 +197 %, C5 +81 %), which reads as a glow nobody asked
         for. EX uses its separate continuous colour rule above 30 kt.
         """
+        hemisphere = 'S' if h is not None and sample(h)[1] < 0 else 'N'
+
         def spr(lvl):
-            s = icon_sprite(lvl, nf)
+            s = icon_sprite(lvl, nf, hemisphere=hemisphere)
             if lvl == 'EX':
                 coloured = ex_icon_tinted(s, wind)
                 return ex_icon_with_lightning(coloured, nf, wind)
             if lvl in ('C5+', 'C5++'):
                 q = icon_tint_colour(wind, lvl)
-                s = tinted((lvl, nf, q), s, q)
-                s = with_glow(s, glow_strength(wind, lvl))
+                s = tinted((hemisphere, lvl, nf, q), s, q)
+                s = with_glow(s, glow_strength(wind, lvl),
+                              highwind_halo_colour(wind) if wind > 200 else None,
+                              1.0 + 0.2 * float(np.clip((wind - 300) / 200, 0, 1)))
                 if lvl == 'C5++':
                     s = tc_digit_tinted(s, wind)
             return s
@@ -2644,7 +2812,7 @@ class R:
                     # icon_sprite looks for an `icons\TC\` folder that does not
                     # exist.
                     def _side(ph):
-                        return level_of(wind, 'TC') if ph == 'TC' else ph
+                        return level_of(wind, ph)
                     la, lb = _side(pa), _side(pb)
                     # Same overlapping crossfade the band change uses: the
                     # incoming phase art fades in OVER the outgoing one, both
@@ -2802,7 +2970,7 @@ class R:
                 break
         if tc1 is not None:
             fi = min(len(self.fx['notets']) - 1, int((t - tc1) * 60))
-            sp = Image.open(self.fx['notets'][fi]).convert('RGB').resize((430, 430), Image.LANCZOS)
+            sp = upgrade_sprite(Image.open(self.fx['notets'][fi]).convert('RGB'), hx).resize((430, 430), Image.LANCZOS)
             # rule 10.  Both the TC icon and the upgrade effect are authored
             # starting at 0 degrees, and the icon turns ICON_TURNS times over one
             # loop of N_ICON frames - so the icon's angle is just arithmetic, no
@@ -3153,11 +3321,11 @@ class R:
                                         fill=(8, 12, 22, int(205 * a)),
                                         outline=(255, 255, 255, int(78 * a)), width=1)
                     d.rectangle([x0, y, x0 + 8, y + CH], fill=c['col'] + (int(240 * a),))
-                    draw_text(d, (x0 + 22, y + 14), c['l1'], font=font(F_MONOB, 29),
+                    text_in_box(d, (x0 + 22, y + 12, x1 - 14, y + 36), c['l1'], font(F_MONOB, 29), font(F_CJKB, 29),
                            fill=c.get('tcol', c['col']) + (int(250 * a),))
-                    draw_text(d, (x0 + 22, y + 52), c['l2'], font=font(F_MONO, 22),
+                    text_in_box(d, (x0 + 22, y + 47, x1 - 14, y + 66), c['l2'], font(F_MONO, 22), font(F_CJKM, 22),
                            fill=single_highwind_text(c.get('wind', 0.0), (232, 240, 252)) + (int(238 * a),))
-                    draw_text(d, (x0 + 22, y + 78), c['l3'], font=font(F_MONO, 19),
+                    text_in_box(d, (x0 + 22, y + 75, x1 - 14, y + 91), c['l3'], font(F_MONO, 19), font(F_CJKM, 19),
                            fill=single_highwind_text(c.get('wind', 0.0), (206, 218, 236)) + (int(225 * a),))
                 y += CH + GAP
 
@@ -3222,17 +3390,15 @@ class R:
         sh = (12, 12, 12, int(190 * aa * (1.0 - _ramp(self.peak_wind, 185.0, 200.0))))
         x0 = 110 + int(off * 430)
         f_en, f_cn = font(F_UIB, 32), font(F_CJKB, 27)
-        base = 14 + f_en.getmetrics()[0]
         head = banner_head()
         headline_colour = single_highwind_text(self.peak_wind, (255, 255, 255), (30, 3, 9))
         data_colour = single_highwind_text(self.peak_wind, (255, 245, 252), (30, 3, 9))
-        mixed_base(d, (446, base + 2), head, f_en, f_cn, sh, 1.0)
-        mixed_base(d, (444, base), head, f_en, f_cn, headline_colour + (a,), 1.0)
+        text_in_box(d, (446, 14, BW - 18, 44), head, f_en, f_cn, sh, 1.0)
+        text_in_box(d, (444, 12, BW - 20, 42), head, f_en, f_cn, headline_colour + (a,), 1.0)
         line2 = banner_line2()
         f2, f2c = font(F_MONOB, 23), font(F_CJKB, 23)
-        b2 = 52 + f2c.getmetrics()[0]
-        mixed_base(d, (444 + 2, b2 + 2), line2, f2, f2c, sh)
-        mixed_base(d, (444, b2), line2, f2, f2c, data_colour + (a,))
+        text_in_box(d, (446, 54, BW - 18, 76), line2, f2, f2c, sh)
+        text_in_box(d, (444, 52, BW - 20, 74), line2, f2, f2c, data_colour + (a,))
         frame.paste(card, (x0, 30))
 
     def frame_hold(self, t):
@@ -3741,6 +3907,7 @@ _preview_TRANS_K = 3.5
 _preview_ICON_BLEND_KT = 14.0
 _preview_TRANS_H = 2.5
 _preview_COL = {'DB': (206, 220, 236), 'TD': (196, 220, 255), 'TS': (58, 226, 92), 'C1': (255, 232, 40), 'C2': (255, 158, 30), 'C3': (244, 86, 32), 'C4': (232, 34, 28), 'C5': (255, 60, 226), 'C5+': (214, 106, 255), 'RV': (176, 192, 214), 'EX': (152, 172, 214)}
+_preview_COL.update({k: COL[k] for k in ('MV', 'MD', 'SD', 'SS')})
 _preview_C5PP_A = np.array([126, 44, 176], dtype=np.float32)
 _preview_C5PP_B = np.array([40, 74, 178], dtype=np.float32)
 _preview_C6_END = np.array([198, 232, 255], dtype=np.float32)
@@ -3748,6 +3915,8 @@ _preview_C6_END = np.array([198, 232, 255], dtype=np.float32)
 def _preview_theme_col(wind, lvl):
     """155 kt+ uses the super-cyclone ramp: pink-purple -> deep blue at 185 kt
     -> ACE fill endpoint (#C6E8FF) at 200 kt, linear in between"""
+    if lvl == 'C5++' and wind > 200:
+        return palette_colour(wind, HIGHWIND_BODY)
     if lvl == 'C5++':
         if wind <= 185.0:
             t = min(1.0, max(0.0, (wind - 170.0) / 15.0))
@@ -3769,7 +3938,7 @@ def _preview_intensity_weights(w):
     return {k: v / tot for k, v in out.items()}
 
 def _preview_phase_side(ph, w):
-    return _preview_intensity_weights(w) if ph == 'TC' else {ph: 1.0}
+    return _preview_intensity_weights(w) if ph == 'TC' else {level_of(w, ph): 1.0}
 
 def _preview_state_weights(ps, h, w):
     for hb, pa, pb in ps.PHASE_BOUNDS:
@@ -3782,7 +3951,7 @@ def _preview_state_weights(ps, h, w):
                 out[k] = out.get(k, 0.0) + v * t
             return out
     ph = _preview_phase_at(ps, h)
-    base = _preview_intensity_weights(w) if ph == 'TC' else {ph: 1.0}
+    base = _preview_intensity_weights(w) if ph == 'TC' else {level_of(w, ph): 1.0}
     for h0, h1, _l0, _l1, _fx in ps.RI_EVENTS:
         if h0 <= h <= h1 and h1 > h0:
             e = 1.0 / max(1e-06, ps.RI_BLEND_FRAC)

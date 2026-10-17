@@ -66,8 +66,8 @@ none of them points into another. If a helper is needed on both sides, copy it.
 ## Notes
 
 * EX keeps source art at <=30 kt; above that, use continuous colours sampled
-  from TC band midpoints, preserving the white core and EX lettering. EX never
-  triggers TD-to-TS upgrade FX/audio. At >=100 kt, add lightning extracted from
+  from TC band midpoints, preserving the white core and EX lettering. A storm remaining EX never
+  triggers TS/SS upgrade FX/audio. At >=100 kt, add lightning extracted from
   the existing uncoloured C7 asset into the shared cache.
 * TC and EX reach `#C6E8FF` at 200 kt. The TC numeral 5 darkens over 185..200 kt
   to `#1E0309`. TC category transitions and phase/track/ACE rules stay unchanged.
@@ -134,3 +134,11 @@ Font paths are anchored to the skill, independent of project asset overrides.
 The parent skill also provides `bin/typhoon/typhoon.exe`, with its Python runtime
 bundled. See the parent `SKILL.md` executable section for commands and rebuild
 instructions. Original sources remain in this folder; rebuilding applies edits.
+
+## Track types and extreme intensities
+
+Read [path data and transitions](../references/track-data.md) for unified
+`track.txt` (full or sparse sixth-column types), interleaved legacy files,
+MV/MD, SD/SS, hemisphere-specific art, TC-only ACE and TS/SS upgrade triggers.
+Read [extreme intensity rules](../references/extreme-intensity.md) for the
+200–500 kt palette, independent halo and 200 kt landfall size cap.

@@ -50,11 +50,12 @@ All HUD text is at full brightness (labels ~236, values 255).
 
 ## Fonts
 
-`consola.ttf` / `consolab.ttf` (Latin), `msyh.ttc` / `msyhbd.ttc` (CJK),
-`seguisb.ttf` / `arialbd.ttf` (titles). Chinese and Latin in one string **must**
-be drawn with `mixed()` / `mixed_base()` so they share a baseline; the CJK size
-is set so its visual height matches the Latin cap height (e.g. Arial Bold 32 px
-pairs with YaHei Bold 27 px).
+Use bundled Saira for all Latin text and digits, and Source Han Sans SC for
+Chinese. Compose mixed scripts on a shared baseline. Measure visible glyph
+bounds for vertical centring, and fit variable text inside its allotted row.
+The status card has no INTENSITY label. Its two badges occupy author-space
+y=239..273 and y=279..311, centred between the coordinates and wind/pressure.
+Panorama cards use bounded three-row text; summary lines have separate bounds.
 
 ## Intensity vocabulary
 
@@ -114,7 +115,7 @@ pairs with YaHei Bold 27 px).
   stays readable.
 * **TC high-wind theme:** Keep the purple -> blue ramp through 170..185 kt,
   then interpolate linearly to the ACE fill's right-edge colour `#C6E8FF` at
-  200 kt and hold it above 200 kt. Apply the same endpoint in single preview
+  200 kt, then follow the anomalous palette through 500 kt (see the shared extreme-intensity reference). Apply the same endpoint in single preview
   and season overview copies. Existing TC category and tint rules remain.
   Above 185 kt, smoothstep the centre numeral 5 to black-red `#1E0309` at
   200 kt. Apply after glow through a cached mask from the original C5 numeral,
@@ -177,7 +178,7 @@ cyclone but unnamed, and the **English name** once named.
 | every TD→TS crossing | `note_ts.mp4` + `note_ts.ogg` (0.5 s) - a storm that weakens below TS and re-intensifies gets a second flash. Crossings in the **extratropical** phase are skipped |
 | >=113 kt | `noice_category4.ogg` looped over each C4+ interval; silent in weaker gaps |
 | >=170 kt | `noice_170.ogg` looped over each interval at or above 170 kt |
-| landfall | impact clip + sound chosen from the category at landfall, at native 60 fps (never slowed). **Above 155 kt** it switches to `landfall-C6.mp4` + `sound.landfall.C6.ogg` and the effect grows by `1 + (wind-155)*5 %` of linear size (spec rule 13), keeping the clip's aspect. `weaken.ogg` 0.35 s later at 2/3 gain |
+| landfall | impact clip + sound chosen from the category at landfall, at native 60 fps (never slowed). **Above 155 kt** it switches to `landfall-C6.mp4` + `sound.landfall.C6.ogg` and the effect grows by `1 + (min(wind,200)-155)*5 %` of linear size (spec rule 13), keeping the clip's aspect. `weaken.ogg` 0.35 s later at 2/3 gain |
 | landfall marker | `Landed-Cx.mp4` **spins continuously on the path at 30 % of its linear size**; the library clip's shrink-and-vanish tail is **cut** (spec rule 3). It never scales with intensity - only the impact burst does |
 | peak marker | a colour dot with a **thin white ring**, filled in that peak's own theme colour (spec rule 4); it stays on the path for the whole run |
 | peak / landfall text | appears with the marker, then **fades out 2 s later** (spec rule 2). The marker stays |
@@ -294,8 +295,8 @@ Its longest side in the 1920x1080 composition is:
 
 ```text
 grow = 1                           if wind <= 155 kt
-grow = 1 + (wind - 155) * 0.05      otherwise
-fade = max(0, 1 - 0.005 * (170 - wind))
+grow = 1 + (min(wind, 200) - 155) * 0.05      otherwise
+fade = max(0, 1 - 0.005 * (170 - min(wind, 200)))
 box = max(4, round((2.966 * 1.2) * 236 * grow * fade))
 ```
 
@@ -350,3 +351,5 @@ Windows font paths. The original Adobe SIL OFL 1.1 license is bundled as
 `LICENSE.txt`; retain it and font copyright notices when distributing.
 Official download URLs and SHA-256 hashes are recorded in `source.json`.
 Font paths are anchored to the skill, independent of project asset overrides.
+
+For all 200–500 kt body/halo nodes, use [extreme intensity rules](../../references/extreme-intensity.md). Cap both landfall size multipliers at 200 kt while retaining actual wind for colour and statistics.

@@ -228,7 +228,14 @@ LABEL = {'DB': 'TROPICAL DISTURBANCE  热带扰动', 'TD': 'TROPICAL DEPRESSION'
          'C5+': 'CATEGORY 5+', 'C5++': 'CATEGORY 5++',
          'RV': 'REMNANT VORTEX  残余涡流', 'EX': 'EXTRATROPICAL  温带气旋'}
 
+COL.update({'MV': COL['DB'], 'MD': COL['TD'], 'SD': COL['TD'], 'SS': COL['TS']})
+LABEL.update({'MV': 'TROPICAL WAVE  东风波', 'MD': 'MONSOON DEPRESSION  季风低压',
+              'SD': 'SUBTROPICAL DEPRESSION  副热带低压',
+              'SS': 'SUBTROPICAL STORM  副热带风暴'})
+
 def level_of(wind, phase):
+    if phase in ('SD', 'SS'):
+        return 'SD' if wind < 34 else 'SS'
     if phase != 'TC':
         return phase
     if wind < 34:  return 'TD'
@@ -241,12 +248,36 @@ def level_of(wind, phase):
     if wind < 170: return 'C5+'
     return 'C5++'
 
-C6_END = np.array([198, 232, 255], dtype=np.float32)        # 200 kt and above
+C6_END = np.array([198, 232, 255], dtype=np.float32)        # 200 kt anchor
+
+
+HIGHWIND_BODY = [(200, (198,232,255)), (220, (192,255,244)),
+                 (240, (223,255,154)), (260, (255,230,186)),
+                 (280, (255,208,229)), (300, (241,221,255)),
+                 (350, (234,223,255)), (400, (228,237,255)),
+                 (450, (233,250,255)), (500, (244,246,255))]
+HIGHWIND_HALO = [(200, (198,232,255)), (220, (192,255,244)),
+                 (240, (223,255,154)), (260, (255,209,110)),
+                 (280, (255,150,210)), (300, (183,108,255)),
+                 (350, (113,96,255)), (400, (54,223,255)),
+                 (450, (100,255,199)), (500, (216,255,82))]
+
+
+def palette_colour(wind, nodes):
+    return tuple(int(round(np.interp(wind, [p[0] for p in nodes],
+                                     [p[1][c] for p in nodes]))) for c in range(3))
+
+
+def highwind_halo_colour(wind):
+    return palette_colour(wind, HIGHWIND_HALO)
+
 
 def theme_col(wind, lvl):
     """155 kt+ uses the super-cyclone ramp: pink-purple -> deep blue at 185 kt
     -> ACE fill endpoint (#C6E8FF) at 200 kt, linear in between"""
     if lvl == 'C5++':
+        if wind > 200.0:
+            return palette_colour(wind, HIGHWIND_BODY)
         if wind <= 185.0:
             t = min(1.0, max(0.0, (wind - 170.0) / 15.0))
             return tuple(int(v) for v in (C5PP_A * (1 - t) + C5PP_B * t))
@@ -334,11 +365,11 @@ def theme_dim(wind):
     return max(0.20, 1.0 - 0.80 * min(1.0, (wind - 185.0) / 15.0))
 
 def landfall_scale(wind):
-    """>155 kt landfalls grow by 5 % of linear size per knot.  This applies to the
+    """>155 kt landfalls grow by 5 % per knot, capped at 200 kt.  This applies to the
     impact effect only - the `Landed` marker is never scaled (spec rule 13)."""
     if wind <= 155.0:
         return 1.0
-    return 1.0 + (wind - 155.0) * 0.05
+    return 1.0 + (min(wind, 200.0) - 155.0) * 0.05
 
 # --- smooth (gradual) level transitions -------------------------------------
 BANDS = [('TD', 0, 33), ('TS', 34, 63), ('C1', 64, 82), ('C2', 83, 95),
@@ -375,7 +406,7 @@ def band_index(w):
 
 def _phase_side(ph, w):
     """weights contributed by one side of a phase boundary"""
-    return intensity_weights(w) if ph == 'TC' else {ph: 1.0}
+    return intensity_weights(w) if ph == 'TC' else {level_of(w, ph): 1.0}
 
 def build_phases():
     """phase boundaries: midpoint between the last fix of one phase and the first
@@ -384,14 +415,15 @@ def build_phases():
     PHASE_BOUNDS = []
     for i in range(1, len(S.hours)):
         if S.phase[i] != S.phase[i - 1]:
-            PHASE_BOUNDS.append(((float(S.hours[i - 1]) + float(S.hours[i])) / 2.0,
+            PHASE_BOUNDS.append((float(S.hours[i]) if S.phase_at_fix[i] else
+                                 (float(S.hours[i - 1]) + float(S.hours[i])) / 2.0,
                                  S.phase[i - 1], S.phase[i]))
     print('  phases: ' + ', '.join('%s->%s @h%.0f' % (a, b, h) for h, a, b in PHASE_BOUNDS))
 
 def _phase_at(h):
     ph = PHASE_BOUNDS[0][1] if PHASE_BOUNDS else S.phase[0]
     for hb, pa, pb in PHASE_BOUNDS:
-        if h > hb: ph = pb
+        if h >= hb: ph = pb
     return ph
 
 def state_weights(h, w):
@@ -404,7 +436,7 @@ def state_weights(h, w):
             for k, v in _phase_side(pb, w).items(): out[k] = out.get(k, 0.0) + v * t
             return out
     ph = _phase_at(h)
-    base = intensity_weights(w) if ph == 'TC' else {ph: 1.0}
+    base = intensity_weights(w) if ph == 'TC' else {level_of(w, ph): 1.0}
     # Inside a rapid-intensification window the band change should read as
     # sudden, so the crossfade is sharpened.  It is NOT replaced by a blend to
     # the window's target level: with the 6 h / 24 h window test an event can run
@@ -600,7 +632,26 @@ def parse_fix_time(tok):
 # segment files, in life-cycle order; the short names win, the long ones remain
 # supported so every shipped storm keeps loading
 SEGMENTS = [('DB', 'Disturbance'), ('TC', 'BestTrack'),
-            ('RV', 'Remnant_Vortex'), ('EX', 'Extratropical')]
+            ('RV', 'Remnant_Vortex'), ('EX', 'Extratropical'),
+            ('DB-LO', 'DB-LO'), ('DB-aL', 'DB-aL'), ('DB-MV', 'DB-MV'),
+            ('DB-MD', 'DB-MD'), ('MV', 'Tropical_Wave'), ('MD', 'Monsoon_Depression'), ('SD', 'Subtropical_Depression'), ('SS', 'Subtropical_Storm')]
+
+def normalize_phase(value):
+    value = value.upper()
+    aliases = {'DB-LO': 'DB', 'DB-AL': 'DB', 'DB-MV': 'MV', 'DB-MD': 'MD',
+               'ST': 'SD', 'TD': 'TC', 'TS': 'TC',
+               **{k: 'TC' for k in ('C1', 'C2', 'C3', 'C4', 'C5', 'C5+', 'C5++')}}
+    value = aliases.get(value, value)
+    if value not in ('DB', 'MV', 'MD', 'TC', 'RV', 'EX', 'SD', 'SS'):
+        raise ValueError('Unknown cyclone type: %s' % value)
+    return value
+
+
+def segment_phase(filename, fallback='TC'):
+    stem = os.path.splitext(os.path.basename(filename))[0].upper()
+    return {'DB': 'DB', 'DB-LO': 'DB', 'DB-AL': 'DB',
+            'DB-MV': 'MV', 'DB-MD': 'MD', 'MV': 'MV', 'MD': 'MD', 'SD': 'SD', 'SS': 'SS'}.get(stem, fallback)
+
 
 def find_segment(short, long):
     """prefer <SHORT>.txt, else any file ending _<Long>.txt"""
@@ -620,6 +671,9 @@ def auto_series():
     `EX.txt` for a storm that never transitioned) is skipped rather than
     contributing a zero-point segment.
     """
+    track = os.path.join(SRC, 'track.txt')
+    if os.path.isfile(track):
+        return [dict(file='track.txt')]
     out = []
     for short, long in SEGMENTS:
         p = find_segment(short, long)
@@ -628,7 +682,7 @@ def auto_series():
         if not has_data_rows(p):
             print('  segment %s is empty - skipped' % os.path.basename(p))
             continue
-        out.append(dict(file=os.path.basename(p), phase=short))
+        out.append(dict(file=os.path.basename(p), phase=segment_phase(p, short)))
     return out
 
 def has_data_rows(path):
@@ -646,35 +700,54 @@ def has_data_rows(path):
 class Series:
     """full life cycle, piecewise phase - built from the config's series list"""
     def __init__(self):
-        def rd(p):
+        def rd(p, default):
             out = []
-            for ln in open(os.path.join(SRC, p), encoding='utf-8'):
-                t = ln.split()
-                if len(t) < 5 or t[0].startswith('#'):
-                    continue          # blank, or a comment line in a data file
-                # a densified PATH fix may carry no intensity at all
-                # ("N/A"), so wind and pressure are parsed separately
-                def num(s):
-                    return float('nan') if s.strip().upper() in ('N/A', 'NA', '-', '') else float(s)
-                out.append([parse_fix_time(t[0]),
-                            float(t[1]), float(t[2]), num(t[3]), num(t[4])])
+            current = default
+            for line_no, ln in enumerate(open(os.path.join(SRC, p), encoding='utf-8-sig'), 1):
+                t = ln.split('#', 1)[0].split()
+                if not t:
+                    continue
+                if len(t) not in (5, 6):
+                    raise ValueError('%s:%d: expected 5 or 6 columns' % (p, line_no))
+                if len(t) == 6:
+                    try:
+                        current = normalize_phase(t[5])
+                    except ValueError as exc:
+                        raise ValueError('%s:%d: %s' % (p, line_no, exc)) from exc
+                if current is None:
+                    raise ValueError('%s:%d: first track fix must specify its type' % (p, line_no))
+                def num(v):
+                    return float('nan') if v.upper() in ('N/A', 'NA', '-') else float(v)
+                point = [parse_fix_time(t[0]), float(t[1]), float(t[2]), num(t[3]), num(t[4])]
+                out.append((point, current, len(t) == 6))
             return out
-        specs = _D.get('series') or auto_series()
+        track = os.path.join(SRC, 'track.txt')
+        specs = [dict(file='track.txt')] if os.path.isfile(track) else (_D.get('series') or auto_series())
         if not specs:
-            raise SystemExit('no track files: give data.series, or put '
-                             'DB.txt / TC.txt (RV.txt, EX.txt) in sourcedata')
-        blocks = []
+            raise SystemExit('no track files: provide track.txt or data.series / legacy phase files')
+        raw = []
         for sp in specs:
-            pts = rd(sp['file'])
+            unified = os.path.basename(sp['file']).lower() == 'track.txt'
+            default = None if unified else normalize_phase(segment_phase(sp['file'], sp.get('phase', 'TC')))
+            pts = rd(sp['file'], default)
             sf = int(sp.get('skip_first', 0) or 0)
             sl = int(sp.get('skip_last', 0) or 0)
-            if sl: pts = pts[sf:len(pts) - sl]
-            elif sf: pts = pts[sf:]
-            blocks.append((pts, sp.get('phase', 'TC')))
-        t0 = blocks[0][0][0][0]
-        raw = []
-        for pts, phase in blocks:
-            raw += [(p, phase) for p in pts]
+            pts = pts[sf:len(pts) - sl if sl else None]
+            raw.extend((point, phase, unified or explicit) for point, phase, explicit in pts)
+        raw.sort(key=lambda r: r[0][0])
+        merged = []
+        for record in raw:
+            if merged and record[0][0] == merged[-1][0][0]:
+                old = merged[-1]
+                if old[1] != record[1] or not np.allclose(old[0][1:], record[0][1:], equal_nan=True):
+                    raise ValueError('Conflicting fixes at %s' % record[0][0])
+                continue
+            merged.append(record)
+        raw = merged
+        if not raw:
+            raise ValueError('No track fixes remain after reading / trimming input')
+        t0 = raw[0][0][0]
+        self.phase_at_fix = [r[2] for r in raw]
         self.t0 = t0
         self.t     = [r[0][0] for r in raw]
         self.phase = [r[1] for r in raw]
@@ -757,7 +830,11 @@ class Series:
             # off the display curve: plateau easing is a cosmetic choice and
             # must not move a published number
             w_syn = np.interp(syn_h, self.ihours, self.iwind)
-            a = np.where(w_syn >= 34, w_syn ** 2, 0.0) / 1e4
+            # Row type is effective at its timestamp, including repeated TC/RV cycles.
+            indices = np.clip(np.searchsorted(self.hours, syn_h, side='right') - 1,
+                              0, len(self.phase) - 1)
+            tc_syn = np.array([self.phase[i] == 'TC' for i in indices])
+            a = np.where(tc_syn & (w_syn >= 34), w_syn ** 2, 0.0) / 1e4
             cum = np.concatenate([[0.0], np.cumsum(a)])
             self.ace = np.interp(self.hours, np.concatenate([[syn_h[0]], syn_h]), cum)
             self.ace_total = float(cum[-1])
@@ -888,15 +965,41 @@ def _last_landfall_h():
     if isinstance(lf, list) and lf: return float(lf[-1]['h'])
     return 0.0
 
+def upgrade_hours():
+    """Every strengthening entry into TS or SS, including phase-only entries."""
+    hs = np.arange(0.0, S.duration_h + 0.01, 0.01)
+    hs = hs[hs <= S.duration_h]
+    ws = np.asarray(S.WF(hs), dtype=float)
+    candidates = [float(hb) for hb, _pa, _pb in PHASE_BOUNDS]
+    for i in np.where((ws[:-1] < 34.0) & (ws[1:] >= 34.0))[0]:
+        lo, hi = float(hs[i]), float(hs[i + 1])
+        for _ in range(32):
+            mid = (lo + hi) / 2.0
+            if float(S.WF(mid)) < 34.0:
+                lo = mid
+            else:
+                hi = mid
+        candidates.append(hi)
+    events = []
+    for h in sorted(candidates):
+        eps = 1e-4
+        before, after = max(0.0, h - eps), min(S.duration_h, h + eps)
+        w0, w1 = float(S.WF(before)), float(S.WF(after))
+        old = level_of(w0, _phase_at(before))
+        new = level_of(w1, _phase_at(after))
+        if new in ('TS', 'SS') and old != new and w1 > w0 + 1e-7:
+            if not events or h - events[-1] > 1e-5:
+                events.append(h)
+    return events
+
+
 def build_key():
     peaks = _D.get('peaks') or []
     return dict(disturbance=0.0, ts=cross(34, True), c1=cross(64, True),
                 c4=cross(113, True), c5end=cross(113, False),
                 peak1=peaks[0]['h'] if peaks else 0.0,
                 peak2=peaks[1]['h'] if len(peaks) > 1 else S.duration_h,
-                ts_all=crossings(34.0, True,
-                                 skip_phases=tuple(_D.get('ts_fx_skip_phases',
-                                                          ['EX']))),
+                ts_all=upgrade_hours(),
                 w170a=cross(170, True), w170b=cross(170, False),
                 landfall=float(_c('audio.landfall_h', 0.0)) or _last_landfall_h(),
                 xt=float(_c('audio.xt_h', S.duration_h)),
@@ -905,8 +1008,8 @@ def build_key():
 KEY = {}
 
 def _ts_fx_hours():
-    """An empty upgrade list means no event; EX can never trigger this FX."""
-    return [h for h in KEY.get('ts_all', ()) if _phase_at(h) != 'EX']
+    """TC and subtropical 34 kt upgrades share this FX; EX never triggers it."""
+    return [h for h in KEY.get('ts_all', ()) if _phase_at(h) in ('TC', 'SD', 'SS')]
 
 
 # ----------------------------------------------------------------------------
@@ -1135,8 +1238,21 @@ ICON_FPS, N_ICON = 20, 600
 # over that loop; we keep every third frame, so 600 frames still = 6 turns
 ICON_TURNS = 6.0
 
+ICONS.update({'MV': ('disturbance/N-DB-aWV.mp4', True),
+              'MD': ('disturbance/N-TD-MD.mp4', True),
+              'SD': ('extratropicals/N-EX-SD.mp4', True),
+              'SS': ('extratropicals/N-EX-SS.mp4', True)})
+
+def icon_jobs():
+    jobs = dict(ICONS)
+    if S is not None and np.any(S.lat < 0):
+        jobs.update({'S_' + k: (rel.replace('N-', 'S-'), flag)
+                     for k, (rel, flag) in ICONS.items()})
+    return jobs
+
+
 def extract_icons():
-    for k, (rel, _) in ICONS.items():
+    for k, (rel, _) in icon_jobs().items():
         src = os.path.join(ASSETS, 'mainicon', rel.replace('/', os.sep))
         d = os.path.join(ICOND, k.replace('+', 'p'))
         if os.path.isdir(d) and len(os.listdir(d)) >= N_ICON - 2:
@@ -1737,12 +1853,12 @@ def _build():
 # ----------------------------------------------------------------------------
 _ic = {}
 ICON_H = 236
-def icon_sprite(lvl, phase, wind=None):
+def icon_sprite(lvl, phase, wind=None, hemisphere='N'):
     """square canvas so sprites of different levels can be cross-faded"""
-    key = (lvl, phase)
+    key = (lvl, phase, hemisphere)
     if key in _ic:
         return _ic[key]
-    d = os.path.join(ICOND, lvl.replace('+', 'p'))
+    d = os.path.join(ICOND, ('S_' if hemisphere == 'S' else '') + lvl.replace('+', 'p'))
     p = os.path.join(d, '%04d.png' % (phase % N_ICON))
     im = Image.open(p).convert('RGB')
     r = ICON_H / float(im.height)
@@ -1768,7 +1884,7 @@ def icon_pair(wind, ph):
     on the boundary.
     """
     if ph != 'TC' or not np.isfinite(wind):
-        return ph, None, 0.0
+        return level_of(wind, ph), None, 0.0
     names = [b[0] for b in BANDS]
     starts = [b[1] for b in BANDS[1:]]
     b = min(starts, key=lambda x: abs(x - wind))
@@ -1827,6 +1943,8 @@ def _ace_ex_endpoint(asset_directory):
 
 def ex_icon_colour(wind):
     """Linear RGB interpolation through TC band midpoints, without plateaus."""
+    if wind > 200.0:
+        return np.asarray(palette_colour(wind, HIGHWIND_BODY), dtype=np.float32)
     palette = _tc_icon_palette(ICOND)
     # C5++ has an open-ended category range; use its authored high-wind
     # purple/blue/ACE-endpoint anchors rather than the sentinel upper bound (999).
@@ -1837,6 +1955,34 @@ def ex_icon_colour(wind):
     colours = np.asarray([colour for _, colour in nodes])
     return np.array([np.interp(wind, speeds, colours[:, channel])
                      for channel in range(3)], dtype=np.float32)
+
+
+
+@lru_cache(maxsize=4)
+def _ss_upgrade_colour(icon_directory):
+    source = Image.open(os.path.join(icon_directory, 'SS', '0000.png')).convert('RGB')
+    rgb = np.asarray(source, dtype=np.float32)
+    value = rgb.max(axis=2)
+    saturation = (value - rgb.min(axis=2)) / np.maximum(value, 1.0)
+    coloured = (saturation > 0.65) & (value > 64) & (rgb[..., 1] >= rgb[..., 0])
+    colour = np.median(rgb[coloured], axis=0) if coloured.any() else _sample_icon_colour([source])
+    return colour / max(1.0, float(colour.max()))
+
+
+def upgrade_sprite(im, h):
+    """SS upgrades borrow SS artwork's chroma; retain white cores and luminance."""
+    if _phase_at(h) in ('SD', 'SS'):
+        rgb = np.asarray(im, dtype=np.float32)
+        value = rgb.max(axis=2)
+        saturation = (value - rgb.min(axis=2)) / np.maximum(value, 1.0)
+        mask = np.clip((saturation - 0.04) / 0.26, 0.0, 1.0)
+        mask = mask * mask * (3.0 - 2.0 * mask)
+        target = value[..., None] * _ss_upgrade_colour(ICOND)
+        rgb += (target - rgb) * mask[..., None]
+        im = Image.fromarray(np.rint(np.clip(rgb, 0, 255)).astype(np.uint8))
+    if sample(h)[1] < 0:
+        im = im.transpose(Image.Transpose.FLIP_LEFT_RIGHT)
+    return im
 
 
 def ex_icon_tinted(im, wind):
@@ -1960,7 +2106,7 @@ def glow_strength(wind, lvl):
     return 0.25 + 0.55 * _ramp(wind, 170.0, 184.0)
 
 _glow_cache = {}
-def with_glow(im, s):
+def with_glow(im, s, colour=None, spread=1.0):
     """additive halo that spares the bright core.
 
     A plain add blows the number out past 180 kt, so the blurred copy is only
@@ -1969,12 +2115,18 @@ def with_glow(im, s):
     """
     if s <= 0.01:
         return im
-    key = (id(im), round(s, 2))
+    key = (id(im), round(s, 2), colour, round(spread, 3))
     v = _glow_cache.get(key)
     if v is None:
-        b = im.filter(ImageFilter.GaussianBlur(18))
+        b = im.filter(ImageFilter.GaussianBlur(18 * spread))
         base = np.asarray(im).astype(np.float32)
         g = np.asarray(b).astype(np.float32) * s
+        if colour is not None:
+            g = g.max(axis=2)[..., None] * (np.array(colour, dtype=np.float32) / 255.0)
+            # Keep the eye and its dark 5 clear of the coloured outer halo.
+            yy, xx = np.mgrid[:im.height, :im.width]
+            radial = np.hypot(xx - im.width / 2, yy - im.height / 2) / im.height
+            g *= np.clip((radial - .16) / .12, 0, 1)[..., None]
         head = np.clip((200.0 - base.max(axis=2)) / 200.0, 0.0, 1.0)[..., None]
         v = Image.fromarray(np.clip(base + g * head, 0, 255).astype(np.uint8))
         if len(_glow_cache) > 400:
@@ -2265,7 +2417,7 @@ class R:
         """rule 17: DB -> invest number, TC before naming -> depression number,
         after naming -> the storm's English name"""
         ids = getattr(S, 'ids', None) or {}
-        if ph == 'DB':
+        if ph in ('DB', 'MV', 'MD'):
             return ids.get('db', ''), (206, 214, 226)
         named_h = None
         nt = getattr(S, 'named_t', None)
@@ -2586,16 +2738,20 @@ class R:
         halo (measured C1 +197 %, C5 +81 %), which reads as a glow nobody asked
         for. EX uses its separate continuous colour rule above 30 kt.
         """
+        hemisphere = 'S' if h is not None and sample(h)[1] < 0 else 'N'
+
         def spr(lvl):
-            s = icon_sprite(lvl, nf)
+            s = icon_sprite(lvl, nf, hemisphere=hemisphere)
             if lvl == 'EX':
                 coloured = ex_icon_tinted(s, wind)
                 return ex_icon_with_lightning(coloured, nf, wind)
             if lvl in ('C5+', 'C5++'):
                 col = theme_col(wind, lvl)
-                q = tuple(int(v // 8) * 8 for v in col)
-                s = tinted((lvl, nf, q), s, q)
-                s = with_glow(s, glow_strength(wind, lvl))
+                q = col if wind > 200 else tuple(int(v // 8) * 8 for v in col)
+                s = tinted((hemisphere, lvl, nf, q), s, q)
+                s = with_glow(s, glow_strength(wind, lvl),
+                              highwind_halo_colour(wind) if wind > 200 else None,
+                              1.0 + 0.2 * float(np.clip((wind - 300) / 200, 0, 1)))
                 if lvl == 'C5++':
                     s = tc_digit_tinted(s, wind)
             return s
@@ -2618,7 +2774,7 @@ class R:
                     # icon_sprite looks for an `icons\TC\` folder that does not
                     # exist.
                     def _side(ph):
-                        return level_of(wind, 'TC') if ph == 'TC' else ph
+                        return level_of(wind, ph)
                     la, lb = _side(pa), _side(pb)
                     # Same overlapping crossfade the band change uses: the
                     # incoming phase art fades in OVER the outgoing one, both
@@ -2765,7 +2921,7 @@ class R:
                 break
         if tc1 is not None:
             fi = min(len(self.fx['notets']) - 1, int((t - tc1) * 60))
-            sp = Image.open(self.fx['notets'][fi]).convert('RGB').resize((430, 430), Image.LANCZOS)
+            sp = upgrade_sprite(Image.open(self.fx['notets'][fi]).convert('RGB'), hx).resize((430, 430), Image.LANCZOS)
             # rule 10.  Both the TC icon and the upgrade effect are authored
             # starting at 0 degrees, and the icon turns ICON_TURNS times over one
             # loop of N_ICON frames - so the icon's angle is just arithmetic, no
@@ -3830,7 +3986,8 @@ def season_load(verbose=False):
         if not os.path.isdir(sd):
             continue
         if not any(has_data_rows(os.path.join(sd, f))
-                   for f in ('DB.txt', 'TC.txt', 'RV.txt', 'EX.txt')):
+                   for f in ('track.txt', 'DB.txt', 'DB-LO.txt', 'DB-aL.txt', 'DB-MV.txt', 'DB-MD.txt', 'MV.txt', 'MD.txt',
+                             'SD.txt', 'SS.txt', 'TC.txt', 'RV.txt', 'EX.txt')):
             print('  skip %-16s no track data' % d)
             continue
         en = d.split('_', 1)[1] if '_' in d else d
@@ -4118,7 +4275,7 @@ class SeasonR:
             if not (tx <= t <= tx + 0.5):
                 continue
             fi = min(len(self.fx['notets']) - 1, int((t - tx) * 60))
-            sp = Image.open(self.fx['notets'][fi]).convert('RGB')
+            sp = upgrade_sprite(Image.open(self.fx['notets'][fi]).convert('RGB'), hx)
             n = max(6, int(round(TSFX_K * ICON)))
             sp = sp.resize((n, n), Image.LANCZOS)
             rk = (st['dir'], round(tx, 3))
@@ -4138,7 +4295,7 @@ class SeasonR:
             # below LFX_FADE_KT the impact loses LFX_FADE_PER_KT of its linear
             # size per knot, so a TS landfall reads much smaller than a C5 one
             _wv = float(np.interp(lf['h'], S.ihours, S.iwind))
-            _fade = max(0.0, 1.0 - LFX_FADE_PER_KT * (LFX_FADE_KT - _wv))
+            _fade = max(0.0, 1.0 - LFX_FADE_PER_KT * (LFX_FADE_KT - min(_wv, 200.0)))
             if tl <= t <= tl + 1.0 and self.fx.get(lf['fx']):
                 fr = self.fx[lf['fx']]
                 fi = min(len(fr) - 1, int((t - tl) * 60))
@@ -4456,6 +4613,9 @@ def cmd_season(argv):
                                    'season_pass1_%s_%s_%dx%d_%dfps.mp4'
                                    % (o['from_'], o['to'], w, h, fps))
     os.makedirs(os.path.dirname(out), exist_ok=True)
+    for st in storms:
+        globals().update(st['ctx'])
+        extract_icons()
     R_ = SeasonR(storms, T, w, h, win, fps, int(o['labels']), int(o['markers']))
     print('pass 1  %s .. %s  ->  screen %.2f .. %.2f s   %d frames  ->  %s'
           % (o['from_'], o['to'], s0, s1, n, out))

@@ -165,7 +165,7 @@ No number or naming timestamp is invented from the project title.
 
 ## Chinese text verification
 
-Route variable text through draw_text and measure it with text_width. These helpers select Microsoft YaHei for CJK strings while retaining the original Latin-only faces, sizes and anchors. Chinese source notes, landfall places and panorama card rows must not use Latin-only font rendering. Inspect intro, HUD, landfall, damage and panorama keyframes before full rendering; missing-glyph boxes block the render.
+Route variable text through draw_text and measure it with text_width. These helpers select bundled Source Han Sans SC for CJK and Saira for Latin/digits, preserving sizes and anchors. Chinese source notes, landfall places and panorama card rows must not use Latin-only font rendering. Inspect intro, HUD, landfall, damage and panorama keyframes before full rendering; missing-glyph boxes block the render.
 
 
 ## Optimized rendering and intensity sound
@@ -183,7 +183,7 @@ cache limits, validation and current-source rerender guidance.
 
 * EX retains its source artwork at <=30 kt; above that, use continuous RGB
   interpolation through sampled TC band midpoint colours, without plateaus or
-  per-frame exposure normalization. EX never triggers TD-to-TS upgrade FX/audio.
+  per-frame exposure normalization. A storm remaining EX never triggers TS/SS upgrade FX/audio.
 * TC and EX reach the ACE fill endpoint `#C6E8FF` at 200 kt. TC keeps its
   existing category transitions. At >=100 kt, EX adds lightning extracted from
   the existing uncoloured C7 asset into the shared derived cache.
@@ -202,15 +202,15 @@ smoothing and effect duration; the preview does not resimulate at 30 fps.
 
 Landfall impact tint follows the icon's `icon_tint_colour` rule: C5 and below
 keep the authored colour; C5+/C5++ use `theme_col` quantized down to multiples
-of 8 and the existing HSV hue-replacement algorithm. White cores are retained.
+of 8 through 200 kt; above 200 kt use the full theme colour. Apply the existing HSV hue-replacement algorithm. White cores are retained.
 The target colour uses intensity at landfall, not the later display-frame
 intensity. It stays fixed during the 1 s impact. Tint uses the bounded asset
 cache; it adds no separate glow and does not alter persistent Landed markers.
 
 ## TC-only ACE and unobstructed ending framing
 
-ACE includes only synoptic 00/06/12/18Z samples inside the actual start/end
-fix times of `data.series` blocks whose phase is `TC`, after skip_first/skip_last.
+ACE includes only synoptic 00/06/12/18Z samples whose effective type in the
+merged, chronologically sorted path is `TC`, after skip_first/skip_last.
 Other phases (DB, RV, EX) never contribute, even above 34 kt. The existing
 34 kt threshold, raw intensity interpolation and ace_end_h cutoff remain.
 Any explicit banner.line2 ACE figure must be refreshed when the rule/data changes.
@@ -248,3 +248,11 @@ Font paths are anchored to the skill, independent of project asset overrides.
 The parent skill also provides `bin/typhoon/typhoon.exe`, with its Python runtime
 bundled. See the parent `SKILL.md` executable section for commands and rebuild
 instructions. Original sources remain in this folder; rebuilding applies edits.
+
+## Track types and extreme intensities
+
+Read [path data and transitions](../references/track-data.md) for unified
+`track.txt` (full or sparse sixth-column types), interleaved legacy files,
+MV/MD, SD/SS, hemisphere-specific art, TC-only ACE and TS/SS upgrade triggers.
+Read [extreme intensity rules](../references/extreme-intensity.md) for the
+200–500 kt palette, independent halo and 200 kt landfall size cap.

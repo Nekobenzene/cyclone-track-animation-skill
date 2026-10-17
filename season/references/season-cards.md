@@ -234,7 +234,7 @@ does not read out the season as a whole - it announces a single system.
 * **Super-cyclone tint matches single.** Peaks at or below 155 kt retain the
   original art. Above 155 and below 170 kt use `(214, 106, 255)`; 170-185 kt
   interpolate from `(126, 44, 176)` to `(40, 74, 178)`; 185-200 kt fade
-  linearly to black, clamped at 200 kt. Replace HSV only where saturation
+  linearly to #C6E8FF, then follow the shared anomalous palette through 500 kt. Replace HSV only where saturation
   exceeds 0.28, with single's median saturation/value normalization, preserving
   white cores and neutral pixels. Tint the original art before resizing and
   drawing text; include the tint in the frame-cache key so storms sharing C5
@@ -363,3 +363,5 @@ they are worth re-writing:
 7. **A time sweep**, not a single peak frame — the off-plot bug only exists in the
    first four months, and the intro is the easiest place to render one frame and
    move on.
+
+For all 200–500 kt body/halo nodes, use [extreme intensity rules](../../references/extreme-intensity.md). Cap both landfall size multipliers at 200 kt while retaining actual wind for colour and statistics.

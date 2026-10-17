@@ -275,3 +275,5 @@ the same rules as pass 1's, restated for screen furniture:
   is the only use of the `summary/` art outside the single renderer, and its own
   rules - stacking, the 3 s hold, the separated axes of motion - are in
   `season-cards.md` section 6b.
+
+Path inputs: see [unified and legacy track rules](../../references/track-data.md). A type file may have time gaps occupied by other type files; merge fixes by timestamp, never by whole-file time ranges.

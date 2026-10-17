@@ -17,8 +17,8 @@ import cv2
 
 def load_renderer(relative):
     tree = ast.parse((ROOT / relative).read_text(encoding='utf-8'))
-    names = {'COL', 'C5PP_A', 'C5PP_B', 'C6_END', 'BANDS', 'ICON_FADE_KT'}
-    functions = {'level_of', 'theme_col', 'icon_pair', 'ex_icon_colour', 'ex_icon_tinted',
+    names = {'COL', 'C5PP_A', 'C5PP_B', 'C6_END', 'HIGHWIND_BODY', 'HIGHWIND_HALO', 'BANDS', 'ICON_FADE_KT'}
+    functions = {'palette_colour', 'highwind_halo_colour', 'level_of', 'theme_col', 'icon_pair', 'ex_icon_colour', 'ex_icon_tinted',
                  '_sample_icon_colour', '_tc_icon_palette', '_phase_at',
                  '_grey_lightning_layer', 'ex_icon_with_lightning', '_ts_fx_hours',
                  '_ace_ex_endpoint', '_tc_digit_mask', 'tc_digit_tinted',
@@ -67,7 +67,7 @@ class ExIconColourTests(unittest.TestCase):
             source = np.full((100, 100, 3), 255, dtype=np.uint8)
             source[43:55, 46:54] = [170, 10, 170]
             source[5:10, 5:10] = [170, 10, 170]
-            ns['icon_sprite'] = lambda *args: Image.fromarray(source)
+            ns['icon_sprite'] = lambda *args, **kwargs: Image.fromarray(source)
             image = Image.new('RGB', (100, 100), (180, 220, 250))
             self.assertIs(ns['tc_digit_tinted'](image, 185), image)
             previous = 1000
@@ -96,7 +96,7 @@ class ExIconColourTests(unittest.TestCase):
             ns = load_renderer(path)
             np.testing.assert_array_equal(ns['theme_col'](185, 'C5++'), ns['C5PP_B'])
             np.testing.assert_array_equal(ns['theme_col'](200, 'C5++'), [198, 232, 255])
-            np.testing.assert_array_equal(ns['theme_col'](220, 'C5++'), [198, 232, 255])
+            np.testing.assert_array_equal(ns['theme_col'](220, 'C5++'), [192, 255, 244])
             expected = (np.asarray(ns['C5PP_B']) + [198, 232, 255])/2
             np.testing.assert_allclose(ns['theme_col'](192.5, 'C5++'), expected, atol=1)
 
@@ -111,7 +111,8 @@ class ExIconColourTests(unittest.TestCase):
                 original = np.asarray(image)
                 np.testing.assert_array_equal(ns['_sample_icon_colour']([image]), [60, 80, 200])
                 # Verify palette nodes really come from the supplied sprite pixels.
-                ns['icon_sprite'] = lambda *args: image
+                ns['sample'] = lambda h: (140, 15)
+                ns['icon_sprite'] = lambda *args, **kwargs: image
                 ns['tinted'] = lambda key, im, colour: im
                 sampled = ns['_tc_icon_palette']('fixture')
                 np.testing.assert_array_equal(sampled['TS'], [60, 80, 200])
@@ -152,7 +153,8 @@ class ExIconColourTests(unittest.TestCase):
                 # Recolouring must never introduce an exposure boost.
                 self.assertLessEqual(int(a.max()), int(bright.max()))
                 self.assertLessEqual(int(b[1, 1].max()), int(dim[1, 1].max()))
-                ns['icon_sprite'] = lambda *args: image
+                ns['sample'] = lambda h: (140, 15)
+                ns['icon_sprite'] = lambda *args, **kwargs: image
                 self.assertIs(ns['sprite_for'](None, {'EX': 1}, 0, 30, phase='EX'), image)
                 self.assertFalse(np.array_equal(ns['sprite_for'](None, {'EX': 1}, 0, 100, phase='EX'), original))
                 self.assertIs(ns['sprite_for'](None, {'TS': 1}, 0, 50, phase='TC'), image)
@@ -196,7 +198,7 @@ class ExIconColourTests(unittest.TestCase):
                 source = np.zeros((20, 20, 3), dtype=np.uint8)
                 source[5:15, 5:15] = [60, 80, 200]
                 source = Image.fromarray(source)
-                ns['icon_sprite'] = lambda *args: source
+                ns['icon_sprite'] = lambda *args, **kwargs: source
                 ns['ex_icon_with_lightning'] = lambda im, nf, wind: im
                 np.testing.assert_array_equal(ns['sprite_for'](None, {'EX': 1}, 0, 200, phase='EX'),
                                               ns['ex_icon_tinted'](source, 200))

@@ -5,7 +5,9 @@ description: SMCY1.3-style tropical-cyclone animations in independent folders th
 
 # Typhoon track animation
 
-使用者和各类 agent 请先阅读 [README.md](README.md)：共享目录、路径数据格式及 single/season 完整制作流程。每个气旋至少提供一份任意阶段的有效路径，TC.txt 并非必需。
+使用者和各类 agent 请先阅读 [README.md](README.md)：共享目录、路径数据格式及 single/season 完整制作流程。每个气旋至少提供一份任意阶段的有效路径，TC.txt 并非必需。支持统一 `track.txt`（逐行或仅变性行标类型），以及时间交错的旧多文件输入。
+
+数据规则见 [路径格式与变性](references/track-data.md)；200–500 kt 调色与登陆尺寸上限见 [极端强度规则](references/extreme-intensity.md)。
 
 | folder | what it renders | start here |
 |---|---|---|
@@ -29,7 +31,7 @@ The project workspace is separate from this installed skill. Its current layout 
   res/_cache/     shared extracted icons and effects
 ```
 
-Here `<work>` is `C:\Users\tangtang\Desktop\work`. Paths such as
+Here `<work>` is the chosen project workspace. Paths such as
 `single/scripts/` and `season/references/` in this skill refer to the installed
 skill, not the project directories with the same names. Resolve projects under
 the workspace and scripts under this skill's actual installation directory.

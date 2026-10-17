@@ -133,7 +133,7 @@ Two multipliers, both linear in wind, both applied:
 * `landfall_scale(wind)` - above 155 kt, **+5 % of linear size per kt**
 * `fade` - at or below 170 kt, **-0.5 % per kt below**, floor 0
 
-    fade = max(0, 1 - 0.005 x (170 - wind))
+    fade = max(0, 1 - 0.005 x (170 - min(wind, 200)))
 
 So a 60 kt landfall draws at 0.45 of the 170 kt size and a 151 kt one at 0.91,
 before `landfall_scale` is applied. The gradient is deliberately steep: a weak
@@ -316,3 +316,5 @@ use the same endpoint. Keep existing TC category transitions and tint rules.
 The TC numeral 5 smoothsteps to black-red `#1E0309` over 185..200 kt through a
 cached mask of the original numeral, applied after glow. Preserve the white
 eye, rings and lightning. Single-only card/banner rules do not apply here.
+
+For all 200–500 kt body/halo nodes, use [extreme intensity rules](../../references/extreme-intensity.md). Cap both landfall size multipliers at 200 kt while retaining actual wind for colour and statistics.

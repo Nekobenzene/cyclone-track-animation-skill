@@ -167,7 +167,7 @@ data:
                                      # 随后保持新等级
   plateau_ease: true                 # 等值连续段经由其中点平滑过渡，
                                      # 而不是画出平坦的台阶
-  ts_fx_skip_phases: ['EX']          # 温带变性后回升的狂风
+  # 升格动效由进入 TS/SS 且风速增强自动触发，不需配置跳过阶段。
                                      # 不算 TS 升级
 
   # 每个局部极大值都计入，而不只是最强的两个：一个有四次
@@ -358,8 +358,8 @@ ffmpeg -v error -y -i cloud.mp4 -vf "select='$sel',crop=300:18:2:2,scale=440:26,
    要从序列推导出来，否则时间线落在别处的风暴会被涂成
    错误阶段的颜色。
 11. **超强气旋登陆是自动的。** 高于 155 kt 时，C6 冲击片段和音效
-   根据登陆时的强度选取，效果按 `1 + (wind - 155) * 3 %` 缩放。
-   高于 185 kt 时，主题色从深蓝继续延伸，到 200 kt 变为黑色；
+   根据登陆时的强度选取，效果按 `1 + (min(wind,200) - 155) * 5 %` 缩放。
+   高于 185 kt 时，主题色从深蓝继续延伸，到 200 kt 变为冷白紫色 #C6E8FF，之后按异常路线延伸至 500 kt；
    峰值高于 155 kt 会重新给全景 banner 着色。台风图标本身
    仍使用 C5 素材。
 12. **灾害点很多，时间很少。** 一个紧凑的受灾区域（日本 13 个县）
@@ -394,11 +394,8 @@ ffmpeg -v error -y -i cloud.mp4 -vf "select='$sel',crop=300:18:2:2,scale=440:26,
 19. **强度图有两个坐标轴。** 气压刻度在左，风速刻度在右——
    等级网格线属于风速曲线，因此它们的数值放在
    右侧。
-20. **每次 TROPICAL 升级都有自己的效果。** 风暴可以减弱到 34 kt
-   以下再次增强；`note_ts` 在每次 TD -> TS 跨越时触发，而不只是
-   第一次。温带阶段内的跨越会被跳过
-   （`data.ts_fx_skip_phases`）——在温带系统内回升的风速
-   不是热带风暴升级。
+20. **每次增强进入 TS 或 SS 都有升格动效与音效。** 包括从任意其他类型变性进入，
+   即使风速此前已经超过 34 kt。减弱或风速不变时不触发；SS 使用黄绿色。
 21. **每一行可能含中文的文字都要走 `mixed()`。** 开场页脚
    （`假想情景`）、HUD 署名行（其中点名机构：`民政部`、
    `消防庁`、`应急管理部`）、banner 和摘要页眉。只用拉丁
@@ -475,3 +472,5 @@ ACE 只包含 phase 为 `TC` 的 `data.series` 块在 skip_first/skip_last
 显式的手动全景配置仍然支持。
 
 可选的地理数据打包在父 skill 的 `assets/geo/` 下，与项目工作区分离。正常渲染不需要它。
+
+Path inputs: see [unified and legacy track rules](../../references/track-data.md). A type file may have time gaps occupied by other type files; merge fixes by timestamp, never by whole-file time ranges.

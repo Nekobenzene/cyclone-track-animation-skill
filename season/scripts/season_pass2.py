@@ -509,23 +509,45 @@ def parse_fix_time(tok):
     raise ValueError(tok)
 
 
+def normalize_phase(value):
+    value = value.upper()
+    aliases = {'DB-LO': 'DB', 'DB-AL': 'DB', 'DB-MV': 'MV', 'DB-MD': 'MD',
+               'ST': 'SD', 'TD': 'TC', 'TS': 'TC',
+               **{k: 'TC' for k in ('C1', 'C2', 'C3', 'C4', 'C5', 'C5+', 'C5++')}}
+    value = aliases.get(value, value)
+    if value not in ('DB', 'MV', 'MD', 'TC', 'RV', 'EX', 'SD', 'SS'):
+        raise ValueError('Unknown cyclone type: %s' % value)
+    return value
+
+
+def segment_phase(filename, fallback='TC'):
+    stem = os.path.splitext(os.path.basename(filename))[0].upper()
+    return {'DB': 'DB', 'DB-LO': 'DB', 'DB-AL': 'DB',
+            'DB-MV': 'MV', 'DB-MD': 'MD', 'MV': 'MV', 'MD': 'MD', 'SD': 'SD', 'SS': 'SS'}.get(stem, fallback)
+
+
 def read_rows(path):
     if not os.path.isfile(path) or os.path.getsize(path) == 0:
         return []
+    unified = os.path.basename(path).lower() == 'track.txt'
+    stem = os.path.splitext(os.path.basename(path))[0].upper()
+    current = None if unified else normalize_phase(segment_phase(path, stem))
     out = []
-    with open(path, encoding='utf-8', errors='replace') as fh:
-        for line in fh:
-            line = line.strip()
-            if not line or line.startswith('#'):
+    with open(path, encoding='utf-8-sig') as fh:
+        for line_no, line in enumerate(fh, 1):
+            t = line.split('#', 1)[0].split()
+            if not t:
                 continue
-            t = line.split()
-            if len(t) < 5:
-                continue
-            try:
-                out.append((parse_fix_time(t[0]), float(t[1]), float(t[2]),
-                            float(t[3]), float(t[4])))
-            except ValueError:
-                continue
+            if len(t) not in (5, 6):
+                raise ValueError('%s:%d: expected 5 or 6 columns' % (path, line_no))
+            if len(t) == 6:
+                current = normalize_phase(t[5])
+            if current is None:
+                raise ValueError('%s:%d: first track fix must specify its type' % (path, line_no))
+            def num(value):
+                return float('nan') if value.upper() in ('N/A', 'NA', '-') else float(value)
+            out.append((parse_fix_time(t[0]), float(t[1]), float(t[2]),
+                        num(t[3]), num(t[4]), current))
     return out
 
 
@@ -612,7 +634,9 @@ class Series:
         off = (-t0.hour) % 6
         syn = np.arange(float(off), self.duration_h + 1e-6, 6.0)
         w = np.interp(syn, self.ihours, self.iwind)
-        a = np.where(w >= 34.0, w * w, 0.0) / 1e4
+        indices = np.clip(np.searchsorted(self.hours, syn, side='right') - 1, 0, len(rows) - 1)
+        tc = np.array([(rows[i][5] if len(rows[i]) > 5 else 'TC') == 'TC' for i in indices])
+        a = np.where(tc & (w >= 34.0), w * w, 0.0) / 1e4
         cum = np.concatenate(([0.0], np.cumsum(a)))
         self.ace = np.interp(self.hours,
                              np.concatenate(([syn[0]], syn)) if len(syn) else [0.0],
@@ -651,7 +675,10 @@ def load_season(season_root):
             continue
         num = int(m.group(1))
         rows = []
-        for fn in ('DB.txt', 'TC.txt', 'RV.txt', 'EX.txt'):
+        files = ('track.txt',) if os.path.isfile(os.path.join(d, 'track.txt')) else (
+            'DB.txt', 'DB-LO.txt', 'DB-aL.txt', 'DB-MV.txt', 'DB-MD.txt', 'MV.txt', 'MD.txt',
+            'SD.txt', 'SS.txt', 'TC.txt', 'RV.txt', 'EX.txt')
+        for fn in files:
             rows.extend(read_rows(os.path.join(d, fn)))
         if not rows:
             continue
@@ -815,8 +842,31 @@ def p2_curves(storms, T):
 _BANF = {}
 
 
+HIGHWIND_BODY = [(200, (198,232,255)), (220, (192,255,244)),
+                 (240, (223,255,154)), (260, (255,230,186)),
+                 (280, (255,208,229)), (300, (241,221,255)),
+                 (350, (234,223,255)), (400, (228,237,255)),
+                 (450, (233,250,255)), (500, (244,246,255))]
+HIGHWIND_HALO = [(200, (198,232,255)), (220, (192,255,244)),
+                 (240, (223,255,154)), (260, (255,209,110)),
+                 (280, (255,150,210)), (300, (183,108,255)),
+                 (350, (113,96,255)), (400, (54,223,255)),
+                 (450, (100,255,199)), (500, (216,255,82))]
+
+
+def palette_colour(wind, nodes):
+    return tuple(int(round(np.interp(wind, [p[0] for p in nodes],
+                                     [p[1][c] for p in nodes]))) for c in range(3))
+
+
+def highwind_halo_colour(wind):
+    return palette_colour(wind, HIGHWIND_HALO)
+
+
 def banner_peak_colour(wind):
     """Single's super-cyclone theme; ordinary C5 and below keep their art."""
+    if wind > 200.0:
+        return palette_colour(wind, HIGHWIND_BODY)
     if wind <= 155.0:
         return None
     if wind < 170.0:
@@ -827,7 +877,7 @@ def banner_peak_colour(wind):
         t = min(1.0, max(0.0, (wind - 170.0) / 15.0))
         return tuple(int(v) for v in (a * (1 - t) + b * t))
     t = min(1.0, (wind - 185.0) / 15.0)
-    return tuple(int(v) for v in (b * (1 - t)))
+    return tuple(int(v) for v in (b * (1 - t) + np.array([198,232,255]) * t))
 
 
 def tint_banner(im, col):

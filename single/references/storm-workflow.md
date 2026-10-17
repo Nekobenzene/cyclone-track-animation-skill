@@ -209,7 +209,7 @@ documented in `storm-pipeline.md` §2. The parts that need real thought:
   Wind and pressure are collapsed independently.
 * `data.landfalls` needs **no** effect names: the impact clip, ground marker and
   sound are picked from the category at landfall, and anything above 155 kt uses
-  the C6 super-cyclone set scaled by `1 + (wind-155)*3 %`. Pin `fx` / `landed`
+  the C6 super-cyclone set scaled by `1 + (min(wind,200)-155)*5 %`. Pin `fx` / `landed`
   only to override. For a storm that lands many times set
   `view.landfall_tag_hold` so the name tags do not pile up.
 * `data.rapid_intensification` - when two adjacent fixes jump two or more SSHWS
@@ -344,12 +344,11 @@ the `info` point count is the check.
     speed alone and only coarsens the sampling. Then remap landfalls, peak hours
     and `ace_end_h` together, and check that the log's `info` still shows the
     peak values you expect.
-16. **Upgrade effects sit on the right threshold.** `note_ts` marks every TD -> TS
-    crossing (34 kt), not TS -> C1 - a storm that weakens below TS and
-    re-intensifies gets another flash. Crossings inside the extratropical phase
-    do not count (`data.ts_fx_skip_phases`): a gale recovering after transition
-    is not a tropical storm upgrade. Rapid-intensification bursts are reserved
-    for the mid-range jumps; C1, C5+ and C5++ targets blend silently.
+16. **Upgrade effects follow class entry.** Play note_ts and its audio when
+    strengthening into TS or SS, including a type change from DB/MV/MD/RV/EX
+    after 34 kt was already crossed. Keep every re-upgrade. Weakening or steady
+    type changes do not trigger it. SS uses yellow-green chroma from its icon.
+    Rapid-intensification bursts retain their existing target-band rules.
 17. **The graph has two axes.** Pressure on the left, wind on the right; the
     category gridline values belong to the wind axis. And the panorama banner
     art follows the peak category - a C2 storm must not wear the C5 banner.
@@ -447,7 +446,7 @@ the `info` point count is the check.
     new test finds - at one point Nesat read `CATEGORY 5++` while the wind was
     165 kt, four knots short of the band.
 39. **Scale the burst, never the marker.** A super-cyclone landfall scales the
-    impact clip by `1 + (wind-155)*5 %`; the `Landed-Cx` marker that stays on the
+    impact clip by `1 + (min(wind,200)-155)*5 %`; the `Landed-Cx` marker that stays on the
     path is always 30 % of its library size, whatever the intensity was.
 39. **The icon fade is linear in intensity, not in time.** Around a band
     boundary  the incoming icon goes from transparent at  - icon_fade_kt
@@ -495,7 +494,7 @@ the `info` point count is the check.
     viewer sees matches what came before. Do not stack a separate end-of-scene
     fade on top of the exit - that reads as two animations fighting.
 49. **Past 185 kt the card TYPE goes white.** The theme colour there is deep
-    blue heading for black, so coloured type on the dark card is unreadable. The
+    blue heading for pale #C6E8FF, so coloured type on the dark card is unreadable. The
     colour bar keeps the theme colour, so the intensity is still encoded.
 50. **A phase change fades in LINEARLY IN TIME; a band change ramps LINEARLY IN
     WIND.** They are different quantities and must not share one code path. A low
@@ -559,3 +558,5 @@ remnant/extratropical stage. All missing means no icon-adjacent identity text.
 No number or naming timestamp is invented from the project title.
 
 Optional geography is bundled at parent skill `assets/geo/`, separate from the project workspace. Normal rendering does not require it.
+
+Path inputs: see [unified and legacy track rules](../../references/track-data.md). A type file may have time gaps occupied by other type files; merge fixes by timestamp, never by whole-file time ranges.

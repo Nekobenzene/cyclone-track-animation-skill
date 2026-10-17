@@ -304,15 +304,41 @@ COL = {'DB': (206, 220, 236), 'TD': (196, 220, 255), 'TS': (58, 226, 92),
        'C1': (255, 232, 40), 'C2': (255, 158, 30), 'C3': (244, 86, 32),
        'C4': (232, 34, 28), 'C5': (255, 60, 226), 'C5+': (214, 106, 255),
        'RV': (176, 192, 214), 'EX': (152, 172, 214)}
+COL.update({'MV': COL['DB'], 'MD': COL['TD'], 'SD': COL['TD'], 'SS': COL['TS']})
+
 C5PP_A = np.array([126, 44, 176], dtype=np.float32)
 C5PP_B = np.array([40, 74, 178], dtype=np.float32)
 C6_END = np.array([198, 232, 255], dtype=np.float32)
+
+
+
+HIGHWIND_BODY = [(200, (198,232,255)), (220, (192,255,244)),
+                 (240, (223,255,154)), (260, (255,230,186)),
+                 (280, (255,208,229)), (300, (241,221,255)),
+                 (350, (234,223,255)), (400, (228,237,255)),
+                 (450, (233,250,255)), (500, (244,246,255))]
+HIGHWIND_HALO = [(200, (198,232,255)), (220, (192,255,244)),
+                 (240, (223,255,154)), (260, (255,209,110)),
+                 (280, (255,150,210)), (300, (183,108,255)),
+                 (350, (113,96,255)), (400, (54,223,255)),
+                 (450, (100,255,199)), (500, (216,255,82))]
+
+
+def palette_colour(wind, nodes):
+    return tuple(int(round(np.interp(wind, [p[0] for p in nodes],
+                                     [p[1][c] for p in nodes]))) for c in range(3))
+
+
+def highwind_halo_colour(wind):
+    return palette_colour(wind, HIGHWIND_HALO)
 
 
 def theme_col(wind, lvl):
     """155 kt+ uses the super-cyclone ramp: pink-purple -> deep blue at 185 kt
     -> ACE fill endpoint (#C6E8FF) at 200 kt, linear in between"""
     if lvl == 'C5++':
+        if wind > 200.0:
+            return palette_colour(wind, HIGHWIND_BODY)
         if wind <= 185.0:
             t = min(1.0, max(0.0, (wind - 170.0) / 15.0))
             return tuple(int(v) for v in (C5PP_A * (1 - t) + C5PP_B * t))
@@ -335,6 +361,8 @@ def intensity_weights(w):
 
 
 def _phase_side(ph, w):
+    if ph in ('SD', 'SS'):
+        ph = 'SD' if w < 34 else 'SS'
     return intensity_weights(w) if ph == 'TC' else {ph: 1.0}
 
 
@@ -349,7 +377,7 @@ def state_weights(ps, h, w):
                 out[k] = out.get(k, 0.0) + v * t
             return out
     ph = _phase_at(ps, h)
-    base = intensity_weights(w) if ph == 'TC' else {ph: 1.0}
+    base = _phase_side(ph, w)
     for h0, h1, _l0, _l1, _fx in ps.RI_EVENTS:
         if h0 <= h <= h1 and h1 > h0:
             e = 1.0 / max(1e-6, ps.RI_BLEND_FRAC)
@@ -360,9 +388,9 @@ def state_weights(ps, h, w):
 
 
 def _phase_at(ps, h):
-    ph = ps.PHASE_BOUNDS[0][1] if ps.PHASE_BOUNDS else 'TC'
+    ph = ps.PHASE_BOUNDS[0][1] if ps.PHASE_BOUNDS else ps.S.phase[0]
     for hb, pa, pb in ps.PHASE_BOUNDS:
-        if h > hb:
+        if h >= hb:
             ph = pb
     return ph
 
