@@ -2,13 +2,13 @@
 
 ## Single track appearance
 
-Only aL/DB, MV, MD and RV use dashed tracks. SD, SS, TC and EX use solid
+Only aL/DB, WV, MD and RV use dashed tracks. SD, SS, TC and EX use solid
 tracks. The animation and both preview backgrounds share these rules.
 
 | Type | Track colour | Pattern |
 |---|---|---|
 | aL / DB | neutral white `#E0E4EA` | dashed |
-| MV | ice cyan `#A4E0E8` | short dashes |
+| WV | ice cyan `#A4E0E8` | short dashes |
 | MD | yellow `#EEE040` | long dashes |
 | SD | pale yellow `#E6EC98` | solid |
 | SS | yellow green `#BCF230` | solid |
@@ -24,7 +24,7 @@ it from TC while following the same broad intensity hues.
 ## Disturbance and subtropical paths
 
 `DB.txt`, `DB-LO.txt` and `DB-aL.txt` select the tropical disturbance aL art.
-`MV.txt` / `DB-MV.txt` select tropical wave art (asset aWV);
+`WV.txt` / `DB-WV.txt` select tropical wave art (asset aWV);
 `MD.txt` / `DB-MD.txt` select monsoon
 depression art (asset MD). `SD.txt` and `SS.txt` are subtropical paths: the
 current interpolated wind selects SD below 34 kt and SS at or above 34 kt,
@@ -46,9 +46,9 @@ present it takes precedence over legacy phase files and `data.series`, so old
 files do not double-load. Without it, the original multi-file workflow remains.
 The first five whitespace-separated columns remain UTC timestamp, longitude,
 latitude, wind (kt), pressure (hPa). A sixth column specifies the type:
-`DB`, `MV`, `MD`, `TC`, `RV`, `EX`, or `ST` (subtropical). `SD`/`SS` are also
+`DB`, `WV`, `MD`, `TC`, `RV`, `EX`, or `ST` (subtropical). `SD`/`SS` are also
 accepted as subtropical types; displayed SD/SS still follows the 34 kt boundary.
-`DB-LO`/`DB-aL`, `DB-MV`, `DB-MD` are accepted aliases. Explicit TD/TS/C1–C5++
+`DB-LO`/`DB-aL`, `DB-WV`, `DB-MD` are accepted aliases. Explicit TD/TS/C1–C5++
 normalize to TC, with the displayed grade derived from wind.
 
 Either give the type on every row, or give it on the first row and only when it
@@ -72,11 +72,11 @@ on two consecutive days while RV.txt contains 06Z/12Z/18Z between them. The
 merged sequence is TC/RV/RV/RV/TC, not an uninterrupted TC interval. ACE follows
 the merged point types. Do not duplicate a timestamp with conflicting types.
 
-`MV.txt` / `MD.txt` are also accepted directly, equivalent to `DB-MV.txt` / `DB-MD.txt`.
+`WV.txt` / `MD.txt` are also accepted directly, equivalent to `DB-WV.txt` / `DB-MD.txt`.
 
 Upgrade FX trigger: play whenever a strengthening storm enters the displayed TS
 or SS class, regardless of its previous type. This includes changing from DB,
-MV, MD, RV or EX after the wind has already passed 34 kt. Wind crossings and
+WV, MD, RV or EX after the wind has already passed 34 kt. Wind crossings and
 phase changes both contribute event candidates; repeated upgrades are retained.
 A weakening or steady-wind type change does not trigger the upgrade. Animation
 and sound use the same event list; SS keeps its yellow-green effect colour.

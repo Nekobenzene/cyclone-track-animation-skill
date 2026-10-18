@@ -14,12 +14,12 @@ class TrackStyleTests(unittest.TestCase):
 from PIL import Image, ImageDraw
 from single.scripts import typhoon_anim as a
 from types import SimpleNamespace
-assert set(a.TRACK_PATTERNS) == {'DB', 'MV', 'MD', 'RV'}
-for phase in ('DB', 'MV', 'MD', 'SD', 'SS', 'TC', 'EX', 'RV'):
+assert set(a.TRACK_PATTERNS) == {'DB', 'WV', 'MD', 'RV'}
+for phase in ('DB', 'WV', 'MD', 'SD', 'SS', 'TC', 'EX', 'RV'):
     assert a._preview_phase_at(SimpleNamespace(PHASE_BOUNDS=[], S=SimpleNamespace(phase=[phase])), 0) == phase
 points = [(x, 10) for x in range(300)]
 colours = [(255, 0, 0) if x < 150 else (0, 255, 0) for x in range(300)]
-for phase in ('DB', 'MV', 'MD', 'RV'):
+for phase in ('DB', 'WV', 'MD', 'RV'):
     image = Image.new('RGB', (300, 20))
     a.draw_track_segments(ImageDraw.Draw(image), points, colours, [phase]*300, 2)
     pixels = [image.getpixel((x, 10)) for x in range(2, 298)]

@@ -195,9 +195,9 @@ single 的输入在 `<project>/sourcedata/`；season 的输入在 `<project>/sou
 20260102000000 140 15 35 1000
 ```
 
-类型可用 `DB、MV、MD、TC、RV、EX、ST`。TC 按实时风速显示 TD／TS／各等级；ST 按 34 kt 显示 SD／SS，也接受 `SD`、`SS` 作为副热带类型标注。类型从标注行的时间起生效；ACE 仅累计 TC 段。`track.txt` 首行必须指定类型。
+类型可用 `DB、WV、MD、TC、RV、EX、ST`。TC 按实时风速显示 TD／TS／各等级；ST 按 34 kt 显示 SD／SS，也接受 `SD`、`SS` 作为副热带类型标注。类型从标注行的时间起生效；ACE 仅累计 TC 段。`track.txt` 首行必须指定类型。
 
-存在 `track.txt` 时优先读取它，不再读取旧文件或 YAML 的 `data.series`。没有它时继续兼容旧版多文件输入，以及 `DB-LO.txt`／`DB-aL.txt`、`DB-MV.txt`、`DB-MD.txt`、`SD.txt`、`SS.txt`。旧文件也可选填第六列，以文件类型为初始默认值。
+存在 `track.txt` 时优先读取它，不再读取旧文件或 YAML 的 `data.series`。没有它时继续兼容旧版多文件输入，以及 `DB-LO.txt`／`DB-aL.txt`、`DB-WV.txt`、`DB-MD.txt`、`SD.txt`、`SS.txt`。旧文件也可选填第六列，以文件类型为初始默认值。
 
 single 支持通过 YAML `data.series` 指定其他文件名及阶段；例如自定义路径文件 `Cyclone.txt`：
 
@@ -318,7 +318,7 @@ single 的 ACE 仅计算 TC 段内 00/06/12/18 UTC 且风速 ≥34 kt 的采样�
 也可用源码工具 `python single/scripts/preview_black.py --project <项目目录>`，
 或传入 `--config <YAML>`。黑底版沿用普通 preview 的取景与分辨率，
 不加载地图像素，也不替换 `preview.png`；`render` / `all` 不自动生成黑底版。
-single 中只有 aL/DB、MV、MD、RV 用虚线，SD、SS、TC、EX 用实线；
+single 中只有 aL/DB、WV、MD、RV 用虚线，SD、SS、TC、EX 用实线；
 配色见 [轨迹规则](references/track-data.md#single-track-appearance)。
 
 ### 第三步：渲染与交付
@@ -458,11 +458,11 @@ python "$SkillRoot\scripts\build_exe.py"
 类型可以反复转换，ACE 只累计合并后实际属于 TC 的时次。
 同一时间戳的重复点必须有一致的数据和类型，否则报错，请保留一条明确记录。
 
-`MV.txt`、`MD.txt` 可直接使用，分别等同于 `DB-MV.txt`、`DB-MD.txt`。
+`WV.txt`、`MD.txt` 可直接使用，分别等同于 `DB-WV.txt`、`DB-MD.txt`。
 
 ### 图标、升格与极端强度
 
-按路径当前纬度选择 N/S 系列图标（南纬使用 S）。MV 使用东风波图标，MD 使用季风低压图标；ST／SD／SS 按实时风速低于或达到 34 kt 分别显示 SD／SS。
+按路径当前纬度选择 N/S 系列图标（南纬使用 S）。WV 使用东风波图标，MD 使用季风低压图标；ST／SD／SS 按实时风速低于或达到 34 kt 分别显示 SD／SS。
 
 增强时进入 TS 或 SS，均播放升格动画与音效，来源类型不限；风速已经超过 34 kt 后再变性进入也会触发。SS 动画使用图标的黄绿色。减弱或风速持平时不触发。
 

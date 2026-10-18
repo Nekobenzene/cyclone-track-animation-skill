@@ -345,7 +345,7 @@ the `info` point count is the check.
     and `ace_end_h` together, and check that the log's `info` still shows the
     peak values you expect.
 16. **Upgrade effects follow class entry.** Play note_ts and its audio when
-    strengthening into TS or SS, including a type change from DB/MV/MD/RV/EX
+    strengthening into TS or SS, including a type change from DB/WV/MD/RV/EX
     after 34 kt was already crossed. Keep every re-upgrade. Weakening or steady
     type changes do not trigger it. SS uses yellow-green chroma from its icon.
     Rapid-intensification bursts retain their existing target-band rules.

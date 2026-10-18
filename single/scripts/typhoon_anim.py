@@ -224,8 +224,8 @@ LABEL = {'DB': 'TROPICAL DISTURBANCE  热带扰动', 'TD': 'TROPICAL DEPRESSION'
          'C5+': 'CATEGORY 5+', 'C5++': 'CATEGORY 5++',
          'RV': 'REMNANT VORTEX  残余涡流', 'EX': 'EXTRATROPICAL  温带气旋'}
 
-COL.update({'MV': COL['DB'], 'MD': COL['TD'], 'SD': COL['TD'], 'SS': COL['TS']})
-LABEL.update({'MV': 'TROPICAL WAVE  东风波', 'MD': 'MONSOON DEPRESSION  季风低压',
+COL.update({'WV': COL['DB'], 'MD': COL['TD'], 'SD': COL['TD'], 'SS': COL['TS']})
+LABEL.update({'WV': 'TROPICAL WAVE  东风波', 'MD': 'MONSOON DEPRESSION  季风低压',
               'SD': 'SUBTROPICAL DEPRESSION  副热带低压',
               'SS': 'SUBTROPICAL STORM  副热带风暴'})
 
@@ -282,10 +282,10 @@ def theme_col(wind, lvl):
     return COL.get(lvl, (220, 220, 220))
 
 # Track colours follow the icon families; dash patterns distinguish related hues.
-TRACK_COL = {'DB': (224, 228, 234), 'MV': (164, 224, 232),
+TRACK_COL = {'DB': (224, 228, 234), 'WV': (164, 224, 232),
              'MD': (238, 224, 64), 'SD': (230, 236, 152),
              'SS': (188, 242, 48), 'RV': (164, 174, 192)}
-TRACK_PATTERNS = {'DB': (16, 11), 'MV': (9, 6),
+TRACK_PATTERNS = {'DB': (16, 11), 'WV': (9, 6),
                   'MD': (26, 10), 'RV': (16, 11)}
 
 
@@ -759,16 +759,16 @@ def parse_fix_time(tok):
 # supported so every shipped storm keeps loading
 SEGMENTS = [('DB', 'Disturbance'), ('TC', 'BestTrack'),
             ('RV', 'Remnant_Vortex'), ('EX', 'Extratropical'),
-            ('DB-LO', 'DB-LO'), ('DB-aL', 'DB-aL'), ('DB-MV', 'DB-MV'),
-            ('DB-MD', 'DB-MD'), ('MV', 'Tropical_Wave'), ('MD', 'Monsoon_Depression'), ('SD', 'Subtropical_Depression'), ('SS', 'Subtropical_Storm')]
+            ('DB-LO', 'DB-LO'), ('DB-aL', 'DB-aL'), ('DB-WV', 'DB-WV'),
+            ('DB-MD', 'DB-MD'), ('WV', 'Tropical_Wave'), ('MD', 'Monsoon_Depression'), ('SD', 'Subtropical_Depression'), ('SS', 'Subtropical_Storm')]
 
 def normalize_phase(value):
     value = value.upper()
-    aliases = {'DB-LO': 'DB', 'DB-AL': 'DB', 'DB-MV': 'MV', 'DB-MD': 'MD',
+    aliases = {'DB-LO': 'DB', 'DB-AL': 'DB', 'DB-WV': 'WV', 'DB-MD': 'MD',
                'ST': 'SD', 'TD': 'TC', 'TS': 'TC',
                **{k: 'TC' for k in ('C1', 'C2', 'C3', 'C4', 'C5', 'C5+', 'C5++')}}
     value = aliases.get(value, value)
-    if value not in ('DB', 'MV', 'MD', 'TC', 'RV', 'EX', 'SD', 'SS'):
+    if value not in ('DB', 'WV', 'MD', 'TC', 'RV', 'EX', 'SD', 'SS'):
         raise ValueError('Unknown cyclone type: %s' % value)
     return value
 
@@ -776,7 +776,7 @@ def normalize_phase(value):
 def segment_phase(filename, fallback='TC'):
     stem = os.path.splitext(os.path.basename(filename))[0].upper()
     return {'DB': 'DB', 'DB-LO': 'DB', 'DB-AL': 'DB',
-            'DB-MV': 'MV', 'DB-MD': 'MD', 'MV': 'MV', 'MD': 'MD', 'SD': 'SD', 'SS': 'SS'}.get(stem, fallback)
+            'DB-WV': 'WV', 'DB-MD': 'MD', 'WV': 'WV', 'MD': 'MD', 'SD': 'SD', 'SS': 'SS'}.get(stem, fallback)
 
 
 def find_segment(short, long):
@@ -1215,7 +1215,7 @@ ICON_FPS, N_ICON = 20, 600
 # over that loop; we keep every third frame, so 600 frames still = 6 turns
 ICON_TURNS = 6.0
 
-ICONS.update({'MV': ('disturbance/N-DB-aWV.mp4', True),
+ICONS.update({'WV': ('disturbance/N-DB-aWV.mp4', True),
               'MD': ('disturbance/N-TD-MD.mp4', True),
               'SD': ('extratropicals/N-EX-SD.mp4', True),
               'SS': ('extratropicals/N-EX-SS.mp4', True)})
@@ -3949,7 +3949,7 @@ _preview_TRANS_K = 3.5
 _preview_ICON_BLEND_KT = 14.0
 _preview_TRANS_H = 2.5
 _preview_COL = {'DB': (206, 220, 236), 'TD': (196, 220, 255), 'TS': (58, 226, 92), 'C1': (255, 232, 40), 'C2': (255, 158, 30), 'C3': (244, 86, 32), 'C4': (232, 34, 28), 'C5': (255, 60, 226), 'C5+': (214, 106, 255), 'RV': (176, 192, 214), 'EX': (152, 172, 214)}
-_preview_COL.update({k: COL[k] for k in ('MV', 'MD', 'SD', 'SS')})
+_preview_COL.update({k: COL[k] for k in ('WV', 'MD', 'SD', 'SS')})
 _preview_C5PP_A = np.array([126, 44, 176], dtype=np.float32)
 _preview_C5PP_B = np.array([40, 74, 178], dtype=np.float32)
 _preview_C6_END = np.array([198, 232, 255], dtype=np.float32)

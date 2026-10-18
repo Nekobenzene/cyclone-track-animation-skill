@@ -1,6 +1,6 @@
 {
  "schema": 1,
- "generated": "2026-10-17T14:56:18Z",
+ "generated": "2026-10-18T00:02:05Z",
  "repo": "Nekobenzene/cyclone-track-animation-skill",
  "tag": "assets-v1",
  "url_template": "https://github.com/{repo}/releases/download/{tag}/{file}",
@@ -9196,12 +9196,12 @@
   },
   "exe": {
    "file": "exe-win64.zip",
-   "bytes": 209264758,
-   "sha256": "1a7574f90701e6b42744eba64ef597ec96dd7e756a145f77a27319f39a423da9",
+   "bytes": 209264760,
+   "sha256": "7610020ce81b996c21506acb6ceceb8be2570f1b9d93d571d1e92499ad5e38db",
    "description": "打包好的 typhoon.exe，自带 Python 解释器",
    "default": false,
    "file_count": 121,
-   "uncompressed_bytes": 209395041,
+   "uncompressed_bytes": 209395047,
    "files": [
     {
      "path": "bin/typhoon/_internal/PIL/_avif.cp312-win_amd64.pyd",
@@ -9546,7 +9546,7 @@
     {
      "path": "bin/typhoon/_internal/base_library.zip",
      "bytes": 1333490,
-     "sha256": "da5c5fbe2410ce4c871ff298f93c601024d5f6d73f3571a1ad0e55ed4669eeb1"
+     "sha256": "7410591a011fbc18a2a869eb3ab022eaf7b5aa4d8a9db6e6188ebb8927361103"
     },
     {
      "path": "bin/typhoon/_internal/charset_normalizer/cd.cp312-win_amd64.pyd",
@@ -9801,12 +9801,12 @@
     {
      "path": "bin/typhoon/source_manifest.json",
      "bytes": 953,
-     "sha256": "b6880fe554eb82f4fdb74a44aebf04a7eee458580f1056b786a3c2a9b0bd3474"
+     "sha256": "74e7f79522707e056abffd182cf9b327a702218c43e0d6afb4e5542207a0a646"
     },
     {
      "path": "bin/typhoon/typhoon.exe",
-     "bytes": 5721655,
-     "sha256": "02a28a7c6f0f44ee15edd60eb95cf0f52b89f8d84620b43e703661eb83b63538"
+     "bytes": 5721661,
+     "sha256": "8b0a33dac0d6e57e540a39125f719d34d3bbce400e322c8a869e77a41bc6465a"
     }
    ]
   }
@@ -9814,8 +9814,8 @@
  "totals": {
   "packs": 8,
   "file_count": 1941,
-  "uncompressed_bytes": 2483831197,
-  "zip_bytes": 2468548761,
+  "uncompressed_bytes": 2483831203,
+  "zip_bytes": 2468548763,
   "default_zip_bytes": 1480535754,
   "default_file_count": 1782
  }

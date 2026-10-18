@@ -304,7 +304,7 @@ COL = {'DB': (206, 220, 236), 'TD': (196, 220, 255), 'TS': (58, 226, 92),
        'C1': (255, 232, 40), 'C2': (255, 158, 30), 'C3': (244, 86, 32),
        'C4': (232, 34, 28), 'C5': (255, 60, 226), 'C5+': (214, 106, 255),
        'RV': (176, 192, 214), 'EX': (152, 172, 214)}
-COL.update({'MV': COL['DB'], 'MD': COL['TD'], 'SD': COL['TD'], 'SS': COL['TS']})
+COL.update({'WV': COL['DB'], 'MD': COL['TD'], 'SD': COL['TD'], 'SS': COL['TS']})
 
 C5PP_A = np.array([126, 44, 176], dtype=np.float32)
 C5PP_B = np.array([40, 74, 178], dtype=np.float32)

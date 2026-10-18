@@ -228,8 +228,8 @@ LABEL = {'DB': 'TROPICAL DISTURBANCE  热带扰动', 'TD': 'TROPICAL DEPRESSION'
          'C5+': 'CATEGORY 5+', 'C5++': 'CATEGORY 5++',
          'RV': 'REMNANT VORTEX  残余涡流', 'EX': 'EXTRATROPICAL  温带气旋'}
 
-COL.update({'MV': COL['DB'], 'MD': COL['TD'], 'SD': COL['TD'], 'SS': COL['TS']})
-LABEL.update({'MV': 'TROPICAL WAVE  东风波', 'MD': 'MONSOON DEPRESSION  季风低压',
+COL.update({'WV': COL['DB'], 'MD': COL['TD'], 'SD': COL['TD'], 'SS': COL['TS']})
+LABEL.update({'WV': 'TROPICAL WAVE  东风波', 'MD': 'MONSOON DEPRESSION  季风低压',
               'SD': 'SUBTROPICAL DEPRESSION  副热带低压',
               'SS': 'SUBTROPICAL STORM  副热带风暴'})
 
@@ -633,16 +633,16 @@ def parse_fix_time(tok):
 # supported so every shipped storm keeps loading
 SEGMENTS = [('DB', 'Disturbance'), ('TC', 'BestTrack'),
             ('RV', 'Remnant_Vortex'), ('EX', 'Extratropical'),
-            ('DB-LO', 'DB-LO'), ('DB-aL', 'DB-aL'), ('DB-MV', 'DB-MV'),
-            ('DB-MD', 'DB-MD'), ('MV', 'Tropical_Wave'), ('MD', 'Monsoon_Depression'), ('SD', 'Subtropical_Depression'), ('SS', 'Subtropical_Storm')]
+            ('DB-LO', 'DB-LO'), ('DB-aL', 'DB-aL'), ('DB-WV', 'DB-WV'),
+            ('DB-MD', 'DB-MD'), ('WV', 'Tropical_Wave'), ('MD', 'Monsoon_Depression'), ('SD', 'Subtropical_Depression'), ('SS', 'Subtropical_Storm')]
 
 def normalize_phase(value):
     value = value.upper()
-    aliases = {'DB-LO': 'DB', 'DB-AL': 'DB', 'DB-MV': 'MV', 'DB-MD': 'MD',
+    aliases = {'DB-LO': 'DB', 'DB-AL': 'DB', 'DB-WV': 'WV', 'DB-MD': 'MD',
                'ST': 'SD', 'TD': 'TC', 'TS': 'TC',
                **{k: 'TC' for k in ('C1', 'C2', 'C3', 'C4', 'C5', 'C5+', 'C5++')}}
     value = aliases.get(value, value)
-    if value not in ('DB', 'MV', 'MD', 'TC', 'RV', 'EX', 'SD', 'SS'):
+    if value not in ('DB', 'WV', 'MD', 'TC', 'RV', 'EX', 'SD', 'SS'):
         raise ValueError('Unknown cyclone type: %s' % value)
     return value
 
@@ -650,7 +650,7 @@ def normalize_phase(value):
 def segment_phase(filename, fallback='TC'):
     stem = os.path.splitext(os.path.basename(filename))[0].upper()
     return {'DB': 'DB', 'DB-LO': 'DB', 'DB-AL': 'DB',
-            'DB-MV': 'MV', 'DB-MD': 'MD', 'MV': 'MV', 'MD': 'MD', 'SD': 'SD', 'SS': 'SS'}.get(stem, fallback)
+            'DB-WV': 'WV', 'DB-MD': 'MD', 'WV': 'WV', 'MD': 'MD', 'SD': 'SD', 'SS': 'SS'}.get(stem, fallback)
 
 
 def find_segment(short, long):
@@ -1238,7 +1238,7 @@ ICON_FPS, N_ICON = 20, 600
 # over that loop; we keep every third frame, so 600 frames still = 6 turns
 ICON_TURNS = 6.0
 
-ICONS.update({'MV': ('disturbance/N-DB-aWV.mp4', True),
+ICONS.update({'WV': ('disturbance/N-DB-aWV.mp4', True),
               'MD': ('disturbance/N-TD-MD.mp4', True),
               'SD': ('extratropicals/N-EX-SD.mp4', True),
               'SS': ('extratropicals/N-EX-SS.mp4', True)})
@@ -2417,7 +2417,7 @@ class R:
         """rule 17: DB -> invest number, TC before naming -> depression number,
         after naming -> the storm's English name"""
         ids = getattr(S, 'ids', None) or {}
-        if ph in ('DB', 'MV', 'MD'):
+        if ph in ('DB', 'WV', 'MD'):
             return ids.get('db', ''), (206, 214, 226)
         named_h = None
         nt = getattr(S, 'named_t', None)
@@ -3986,7 +3986,7 @@ def season_load(verbose=False):
         if not os.path.isdir(sd):
             continue
         if not any(has_data_rows(os.path.join(sd, f))
-                   for f in ('track.txt', 'DB.txt', 'DB-LO.txt', 'DB-aL.txt', 'DB-MV.txt', 'DB-MD.txt', 'MV.txt', 'MD.txt',
+                   for f in ('track.txt', 'DB.txt', 'DB-LO.txt', 'DB-aL.txt', 'DB-WV.txt', 'DB-MD.txt', 'WV.txt', 'MD.txt',
                              'SD.txt', 'SS.txt', 'TC.txt', 'RV.txt', 'EX.txt')):
             print('  skip %-16s no track data' % d)
             continue

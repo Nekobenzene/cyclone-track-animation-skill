@@ -271,6 +271,6 @@ instructions. Original sources remain in this folder; rebuilding applies edits.
 
 Read [path data and transitions](../references/track-data.md) for unified
 `track.txt` (full or sparse sixth-column types), interleaved legacy files,
-MV/MD, SD/SS, hemisphere-specific art, TC-only ACE and TS/SS upgrade triggers.
+WV/MD, SD/SS, hemisphere-specific art, TC-only ACE and TS/SS upgrade triggers.
 Read [extreme intensity rules](../references/extreme-intensity.md) for the
 200–500 kt palette, independent halo and 200 kt landfall size cap.

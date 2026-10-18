@@ -511,11 +511,11 @@ def parse_fix_time(tok):
 
 def normalize_phase(value):
     value = value.upper()
-    aliases = {'DB-LO': 'DB', 'DB-AL': 'DB', 'DB-MV': 'MV', 'DB-MD': 'MD',
+    aliases = {'DB-LO': 'DB', 'DB-AL': 'DB', 'DB-WV': 'WV', 'DB-MD': 'MD',
                'ST': 'SD', 'TD': 'TC', 'TS': 'TC',
                **{k: 'TC' for k in ('C1', 'C2', 'C3', 'C4', 'C5', 'C5+', 'C5++')}}
     value = aliases.get(value, value)
-    if value not in ('DB', 'MV', 'MD', 'TC', 'RV', 'EX', 'SD', 'SS'):
+    if value not in ('DB', 'WV', 'MD', 'TC', 'RV', 'EX', 'SD', 'SS'):
         raise ValueError('Unknown cyclone type: %s' % value)
     return value
 
@@ -523,7 +523,7 @@ def normalize_phase(value):
 def segment_phase(filename, fallback='TC'):
     stem = os.path.splitext(os.path.basename(filename))[0].upper()
     return {'DB': 'DB', 'DB-LO': 'DB', 'DB-AL': 'DB',
-            'DB-MV': 'MV', 'DB-MD': 'MD', 'MV': 'MV', 'MD': 'MD', 'SD': 'SD', 'SS': 'SS'}.get(stem, fallback)
+            'DB-WV': 'WV', 'DB-MD': 'MD', 'WV': 'WV', 'MD': 'MD', 'SD': 'SD', 'SS': 'SS'}.get(stem, fallback)
 
 
 def read_rows(path):
@@ -676,7 +676,7 @@ def load_season(season_root):
         num = int(m.group(1))
         rows = []
         files = ('track.txt',) if os.path.isfile(os.path.join(d, 'track.txt')) else (
-            'DB.txt', 'DB-LO.txt', 'DB-aL.txt', 'DB-MV.txt', 'DB-MD.txt', 'MV.txt', 'MD.txt',
+            'DB.txt', 'DB-LO.txt', 'DB-aL.txt', 'DB-WV.txt', 'DB-MD.txt', 'WV.txt', 'MD.txt',
             'SD.txt', 'SS.txt', 'TC.txt', 'RV.txt', 'EX.txt')
         for fn in files:
             rows.extend(read_rows(os.path.join(d, fn)))

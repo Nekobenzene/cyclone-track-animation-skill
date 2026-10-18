@@ -13,9 +13,21 @@ import tempfile
 from types import SimpleNamespace
 import numpy as np
 from single.scripts import typhoon_anim
-from season.scripts import season_pass1, season_overview
+from season.scripts import season_pass1, season_overview, season_pass2
+for m in (typhoon_anim, season_pass1, season_pass2):
+    assert m.normalize_phase('WV') == 'WV'
+    assert m.normalize_phase('DB-WV') == 'WV'
+    assert m.segment_phase('WV.txt') == 'WV'
+    assert m.segment_phase('DB-WV.txt') == 'WV'
+    for obsolete in ('MV', 'DB-MV'):
+        try:
+            m.normalize_phase(obsolete)
+        except ValueError:
+            pass
+        else:
+            raise AssertionError('Obsolete type accepted: ' + obsolete)
 for m in (typhoon_anim, season_pass1):
-    for name, phase in [('DB','DB'),('DB-LO','DB'),('DB-aL','DB'),('DB-MV','MV'),('DB-MD','MD'),('MV','MV'),('MD','MD'),('SD','SD'),('SS','SS')]:
+    for name, phase in [('DB','DB'),('DB-LO','DB'),('DB-aL','DB'),('DB-WV','WV'),('DB-MD','MD'),('WV','WV'),('MD','MD'),('SD','SD'),('SS','SS')]:
         assert m.segment_phase(name+'.txt', 'DB') == phase
     for phase in ('SD','SS'):
         assert m.level_of(33.99,phase) == 'SD'
@@ -25,22 +37,22 @@ for m in (typhoon_anim, season_pass1):
     with tempfile.TemporaryDirectory() as td:
         m.SRC=td; m._D={}
         Path(td,'SS.txt').write_text('20260101120000 140 -15 40 1000\n20260101180000 140 -15 45 1000\n')
-        Path(td,'DB-MV.txt').write_text('20260101000000 140 -15 20 1000\n20260101060000 140 -15 25 1000\n')
+        Path(td,'DB-WV.txt').write_text('20260101000000 140 -15 20 1000\n20260101060000 140 -15 25 1000\n')
         m.S=m.Series()
-        assert list(m.S.phase)==['MV','MV','SS','SS'],m.S.phase
+        assert list(m.S.phase)==['WV','WV','SS','SS'],m.S.phase
         assert list(m.S.hours)==[0,6,12,18]
         jobs=m.icon_jobs()
-        assert jobs['S_MV'][0]=='disturbance/S-DB-aWV.mp4'
+        assert jobs['S_WV'][0]=='disturbance/S-DB-aWV.mp4'
         assert jobs['S_MD'][0]=='disturbance/S-TD-MD.mp4'
         for _,(rel,_) in jobs.items():
             if Path('assets/SMCY1.3/mainicon').is_dir():
                 assert (Path('assets/SMCY1.3/mainicon')/rel).is_file(),rel
     with tempfile.TemporaryDirectory() as td:
         m.SRC=td; m._D={}
-        Path(td,'MV.txt').write_text('20260101000000 140 -15 20 1000\n')
+        Path(td,'WV.txt').write_text('20260101000000 140 -15 20 1000\n')
         Path(td,'MD.txt').write_text('20260101060000 140 -15 25 1000\n')
         m.S=m.Series()
-        assert m.S.phase==['MV','MD'],m.S.phase
+        assert m.S.phase==['WV','MD'],m.S.phase
     m.sample=lambda h: (140,-15)
     seen=[]
     m.icon_sprite=lambda lvl,nf,**kw: seen.append((lvl,kw['hemisphere'])) or 'sprite'
@@ -56,7 +68,7 @@ for m in (typhoon_anim, season_pass1):
     np.testing.assert_array_equal(got[0,1],[255,255,255])
     np.testing.assert_array_equal(got[0,0],[0,0,0])
     m.KEY={'ts_all':[1,2,3,4,5]}
-    m._phase_at=lambda h: {1:'TC',2:'SD',3:'SS',4:'EX',5:'MV'}[h]
+    m._phase_at=lambda h: {1:'TC',2:'SD',3:'SS',4:'EX',5:'WV'}[h]
     assert m._ts_fx_hours()==[1,2,3]
 assert season_overview._phase_side('SD',34)=={'SS':1.0}
 assert typhoon_anim._preview_phase_side('SS',30)=={'SD':1.0}
