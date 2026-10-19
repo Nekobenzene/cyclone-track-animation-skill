@@ -13,13 +13,13 @@ git clone https://github.com/Nekobenzene/cyclone-track-animation-skill
 cd cyclone-track-animation-skill
 
 python tools\fetch_assets.py --list      # 先看有哪些包、各多大（不下载）
-python tools\fetch_assets.py             # 装默认包，约 1.4 GB
+python tools\fetch_assets.py --pack map,icons,fx,font,runtime,exe # 编译版完整安装
 ```
 
 装完即可使用。建议立刻验一遍：
 
 ```powershell
-python tools\fetch_assets.py --verify-only   # 全量哈希复核，8 个包应全部 ok
+python tools\fetch_assets.py --verify-only   # 按需选择已安装包进行哈希复核
 bin\typhoon\typhoon.exe check                # 期望 {"ok": true, ...}
 ```
 
@@ -29,7 +29,7 @@ bin\typhoon\typhoon.exe check                # 期望 {"ok": true, ...}
 
 | 场景 | 需要什么 |
 |---|---|
-| 只跑编译版 | Windows x64，**不需要** Python、字体、FFmpeg；装 `exe` 包即可 |
+| 只跑编译版 | Windows x64，**无需另装** Python、字体、FFmpeg；装 `map,icons,fx,font,runtime,exe` |
 | 跑 Python 源码 | **Windows x64 CPython 3.12**（`runtime` 包里的库是 3.12 的） |
 | 只用 `fetch_assets.py` 下载 | 任意 Python 3.8+（不自带 Python 时，也可以走第 5 节手动下载） |
 
@@ -55,8 +55,8 @@ bin\typhoon\typhoon.exe check                # 期望 {"ok": true, ...}
 ## 4. 按需安装
 
 ```powershell
-# 只用编译版 exe（不装便携运行库，省 581 MB）
-python tools\fetch_assets.py --pack map,icons,fx,font,exe
+# 编译版完整安装（runtime提供FFmpeg/FFprobe）
+python tools\fetch_assets.py --pack map,icons,fx,font,runtime,exe
 
 # 用系统 Python 跑源码，依赖自己装
 python tools\fetch_assets.py --pack map,icons,fx,font

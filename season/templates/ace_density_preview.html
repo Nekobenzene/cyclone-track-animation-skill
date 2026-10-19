@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="zh-CN">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ACE 密度 · 实时调参</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#0c111a;color:#e7edf6;font:14px system-ui,"Microsoft YaHei",sans-serif}header{padding:20px 28px;border-bottom:1px solid #29313e;display:flex;justify-content:space-between;align-items:center}h1{margin:0;font-size:22px;font-weight:650}header span,small{color:#9caabd}main{display:grid;grid-template-columns:290px minmax(0,1fr);gap:24px;padding:24px}aside{border-right:1px solid #29313e;padding-right:24px}.control{margin-bottom:23px}label{display:block;margin-bottom:9px;color:#c5d1e0}.pair{display:flex;gap:12px;align-items:center}input[type=range]{width:100%;accent-color:#79cdbf}input[type=number],select{background:#151e2b;border:1px solid #39465a;color:#f0f5fa;padding:8px;border-radius:5px;max-width:100%;width:88px}select{width:100%}input:disabled{opacity:.45}input[type=checkbox]{accent-color:#79cdbf}button{background:#79cdbf;border:0;color:#102322;border-radius:5px;padding:10px 14px;cursor:pointer;font-weight:650}button.secondary{background:#253247;color:#d6e1ef}button:disabled{opacity:.5;cursor:wait}.buttons{display:flex;gap:8px;flex-wrap:wrap}.stats{display:flex;flex-wrap:wrap;gap:28px;margin-bottom:16px}.stats strong{font-size:22px;font-variant-numeric:tabular-nums;display:block;margin-top:4px}.canvasbox{background:#050910;border:1px solid #29313e;position:relative}canvas#view{display:block;width:100%;height:auto}#status{margin:14px 0;color:#9eafc5;min-height:20px}.note{line-height:1.8;color:#a5b4c8;font-size:12px;margin-top:22px}a{color:#85d5c6}#busy{color:#7fd8c3}footer{margin-top:12px;color:#8293aa;font-size:12px}@media(max-width:960px){main{grid-template-columns:1fr;padding:16px}aside{border-right:0;border-bottom:1px solid #29313e;display:grid;grid-template-columns:1fr 1fr;gap:16px;padding:0}.control{margin:0 0 10px}.note{margin:0 0 12px}header{padding:16px}.stats{gap:20px}}
+</style>
+<style>main{grid-template-columns:240px minmax(0,1fr)}@media(max-width:960px) and (min-width:701px){main{grid-template-columns:220px minmax(0,1fr);padding:16px;gap:18px}aside{display:block;border-right:1px solid #29313e;border-bottom:0;padding-right:16px}.control{margin-bottom:20px}.note{margin-top:20px}}@media(max-width:700px){main{grid-template-columns:1fr}main section{grid-row:1}main aside{grid-row:2}}</style>
+<header><h1>ACE 密度 · 实时调参</h1><span id="project"></span></header>
+<main><aside>
+<div class="control"><label for="background">底片</label><select id="background"><option value="map">地图</option><option value="black">黑底</option><option value="transparent">透明底</option></select></div>
+<div class="control"><label for="layers">绘制内容</label><select id="layers"><option value="both">路径＋热力</option><option value="track">仅路径</option><option value="heat">仅热力</option></select></div>
+<div class="control"><label for="sigma">高斯 σ / 度</label><div class="pair"><input id="sigma" type="range" min="0.1" max="5" step="0.05" value="1"><input id="sigmaN" aria-label="高斯 σ 数值" type="number" min="0.1" max="5" step="0.05" value="1"></div><small id="pixelSigma">换算到所选计算精度的像素核。</small></div>
+<div class="control"><label for="radius">扩散半径 / 度（每轴截断）</label><div class="pair"><input id="radius" type="range" min="0.3" max="15" step="0.1" value="3"><input id="radiusN" aria-label="扩散半径数值" type="number" min="0.3" max="15" step="0.1" value="3"></div><small>一般从 3σ 开始调整。</small></div>
+<div class="control"><label for="step">路径采样步长 / 分钟</label><div class="pair"><input id="step" type="range" min="1" max="60" step="1" value="10"><input id="stepN" aria-label="路径采样步长数值" type="number" min="1" max="60" step="1" value="10"></div></div>
+<div class="control"><label><input id="auto" type="checkbox" checked> 自动采用实际峰值</label><label for="maximum">标尺上限 / ACE 每平方度</label><input id="maximum" aria-label="标尺上限" type="number" min="0.000001" step="0.01" value="1" disabled><small id="maxHint">关闭自动后可手动输入任意正数。</small></div>
+<div class="control"><label for="opacity">热力不透明度</label><div class="pair"><input id="opacity" type="range" min="0" max="1" step="0.01" value="0.9"><input id="opacityN" aria-label="热力不透明度数值" type="number" min="0" max="1" step="0.01" value="0.9"></div></div>
+<div class="control"><label for="resolution">平滑计算精度</label><select id="resolution"><option value="960">960 × 540 · 快速</option><option value="1280">1280 × 720</option><option value="1920">1920 × 1080 · 精细</option></select><small>在像素浮点场上平滑，逐像素映射颜色。</small></div>
+<div class="control"><label for="exportSize">导出图片尺寸</label><select id="exportSize"><option value="1920">1920 × 1080</option><option value="3840">3840 × 2160</option></select></div>
+<div class="buttons"><button id="saveImage" disabled>导出 PNG</button><button id="saveParams" class="secondary" disabled>保存参数</button><button id="reset" class="secondary">重置</button></div>
+<div class="note">地图、资料、色标均已内嵌，可离线使用。原始 1° 网格保留统计口径；显示使用连续路径与像素高斯核。平滑范围表示活动集中程度，不代表实际经过或物理风场。<br>试不同参数比较绝对强度时，请使用相同的手动标尺上限。满意后把参数 JSON 发给我。</div>
+</aside><section>
+<div class="stats"><div><small>原始 TC ACE</small><strong id="total">—</strong></div><div><small>平滑后实际峰值 / 平方度</small><strong id="peak">—</strong></div><div><small>当前标尺上限</small><strong id="scale">—</strong></div></div>
+<div class="canvasbox"><canvas id="view" width="1920" height="1080" aria-label="实时 ACE 密度地图"></canvas></div>
+<div id="status"><span id="busy">正在初始化…</span></div>
+<footer>所有调整仅影响当前预览；可保存参数后再确定正式规则。</footer>
+</section></main>
+<script id="data" type="application/json">__ACE_DATA__</script>
+<script>
+'use strict';
+const DATA=JSON.parse(document.getElementById('data').textContent), $=id=>document.getElementById(id);
+const canvas=$('view'), ctx=canvas.getContext('2d'), map=new Image(),trackOverlay=new Image();
+let field=null, FW=0,FH=0,peak=0,lastResult=null,timer=0,sequence=0,busy=false,pending=null;
+if(DATA.font){const face=new FontFace('Saira',`url(${DATA.font})`);face.load().then(font=>{document.fonts.add(font);document.body.style.fontFamily='Saira,system-ui,"Microsoft YaHei",sans-serif';repaint();}).catch(()=>{});}
+if(DATA.native_size){const option=document.createElement('option');option.value=DATA.native_size[0];option.textContent=DATA.native_size.join(' × ')+' · 原地图精度';option.selected=true;$('exportSize').appendChild(option);}
+$('project').textContent=DATA.season+' · '+DATA.storm_count+' 个气旋 · 离线预览';
+$('total').textContent=DATA.total_ace.toFixed(4);
+function params(){return {background:$('background').value,layers:$('layers').value,sigma:+$('sigma').value,radius:+$('radius').value,sample_minutes:+$('step').value,opacity:+$('opacity').value,auto_max:$('auto').checked,legend_max:+$('maximum').value,field_width:+$('resolution').value};}
+function settings(){return {version:1,season:DATA.season,method:'continuous_path_pixel_gaussian',...params(),legend_max:limit(),actual_peak:peak,statistics_grid_degrees:1,blur_units:'degrees converted to raster pixels',sigma_pixels:{x:+$('sigma').value*FW/(DATA.window[1]-DATA.window[0]),y:+$('sigma').value*FH/(DATA.window[3]-DATA.window[2])},export_width:+$('exportSize').value,total_ace:DATA.total_ace,field_ace:lastResult?.mass,visible_source_ace:lastResult?.visible};}
+function limit(){return $('auto').checked?Math.max(.01,Math.round(peak*100)/100):Math.max(.01,Math.round((+$('maximum').value||.01)*100)/100);}
+function download(blob,name){const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1500);}
+function lut(value,max){let z=Math.min(2047,Math.max(0,value/max*2047)),i=Math.floor(z),j=Math.min(2047,i+1),t=z-i;const a=DATA.lut[i],b=DATA.lut[j];return a.map((v,k)=>v+(b[k]-v)*t);}
+function draw(target=canvas){if(!field||!map.complete)return;const w=target.width,h=target.height,dc=target.getContext('2d');dc.clearRect(0,0,w,h);const background=$('background').value,chosenLayers=$('layers').value;if(background==='map')dc.drawImage(map,0,0,w,h);else if(background==='black'){dc.fillStyle='#000';dc.fillRect(0,0,w,h);}if(chosenLayers!=='track'){const overlay=document.createElement('canvas');overlay.width=w;overlay.height=h;const oc=overlay.getContext('2d'),im=oc.createImageData(w,h),dst=im.data,max=limit(),opacity=+$('opacity').value;
+ // Interpolate the scalar density BEFORE applying the colour ramp, at every output pixel.
+ const xs=new Int32Array(w),xt=new Float32Array(w);for(let x=0;x<w;x++){let f=Math.max(0,Math.min(FW-1,(x+.5)*FW/w-.5));xs[x]=Math.floor(f);xt[x]=f-xs[x];}
+ for(let y=0;y<h;y++){let fy=Math.max(0,Math.min(FH-1,(y+.5)*FH/h-.5)),ya=Math.floor(fy),yb=Math.min(FH-1,ya+1),ty=fy-ya;for(let x=0;x<w;x++){let xa=xs[x],xb=Math.min(FW-1,xa+1),tx=xt[x],v=(field[ya*FW+xa]*(1-tx)+field[ya*FW+xb]*tx)*(1-ty)+(field[yb*FW+xa]*(1-tx)+field[yb*FW+xb]*tx)*ty;if(v<=1e-10)continue;let z=Math.min(2047,v/max*2047),i=Math.floor(z),j=Math.min(2047,i+1),t=z-i,a=DATA.lut[i],b=DATA.lut[j],k=(y*w+x)*4;dst[k]=a[0]+(b[0]-a[0])*t;dst[k+1]=a[1]+(b[1]-a[1])*t;dst[k+2]=a[2]+(b[2]-a[2])*t;dst[k+3]=(a[3]+(b[3]-a[3])*t)*opacity;}}
+ oc.putImageData(im,0,0);dc.drawImage(overlay,0,0);}if(chosenLayers!=='heat'&&trackOverlay.complete&&trackOverlay.naturalWidth)dc.drawImage(trackOverlay,0,0,w,h);const s=w/1920,barW=24*s,barH=400*s,bx=w-43*s-barW,by=h-barH-43*s;
+ // Colour column only, with no title, tick marks or numbers in the image.
+ if(chosenLayers!=='track')for(let yy=0;yy<barH;yy++){let pos=1-yy/(barH-1),nodes=[0,.25,.5,.75,1],values=[0,.125,.3125,.625,1],n=Math.min(3,Math.floor(pos*4)),t=(pos-nodes[n])/.25,c=lut((values[n]*(1-t)+values[n+1]*t)*limit(),limit());dc.fillStyle=`rgba(${c[0]},${c[1]},${c[2]},${c[3]/255})`;dc.fillRect(bx,by+yy,barW,1.2);}
+ $('scale').textContent=limit().toFixed(2);}
+function repaint(){$('pixelSigma').textContent=FW?`当前 σ ≈ ${(+ $('sigma').value*FW/(DATA.window[1]-DATA.window[0])).toFixed(2)} 像素`:'换算到所选计算精度的像素核。';requestAnimationFrame(()=>draw());}
+const workerSource=String.raw`
+let D=null;
+onmessage=event=>{if(event.data.init){D=event.data.init;return;}const {id,p}=event.data,start=performance.now();try{
+const W=p.field_width,H=Math.round(W*9/16),N=W*H,[west,east,south,north]=D.window,dx=(east-west)/W,dy=(north-south)/H,base=new Float32Array(N);let visible=0;
+function at(track,h,key){const t=track.hours,a=track[key];let lo=0,hi=t.length-1;while(lo+1<hi){const mid=(lo+hi)>>1;if(t[mid]<=h)lo=mid;else hi=mid;}if(t.length===1)return a[0];const f=Math.max(0,Math.min(1,(h-t[lo])/(t[hi]-t[lo]||1)));return a[lo]+(a[hi]-a[lo])*f;}
+function deposit(lon,lat,mass){const center=(west+east)/2;lon+=Math.round((center-lon)/360)*360;let x=(lon-west)/dx-.5,y=(north-lat)/dy-.5;if(x<-.5||x>W-.5||y<-.5||y>H-.5)return;const a=Math.floor(x),b=Math.floor(y),fx=x-a,fy=y-b;let points=[],norm=0;for(let j=0;j<2;j++)for(let i=0;i<2;i++){let xx=a+i,yy=b+j,w=(i?fx:1-fx)*(j?fy:1-fy);if(xx>=0&&xx<W&&yy>=0&&yy<H){points.push([yy*W+xx,w]);norm+=w;}}for(const [index,w]of points)base[index]+=mass*w/norm;visible+=mass;}
+for(const [ti,lo,hi,ace,h]of D.segments){const track=D.tracks[ti],n=hi>lo?Math.max(1,Math.ceil((hi-lo)*60/p.sample_minutes)):1;for(let i=0;i<n;i++){let q=hi>lo?lo+(i+.5)*(hi-lo)/n:h;deposit(at(track,q,'lon'),at(track,q,'lat'),ace/n);}}
+function kernel(sigma,radius){const r=Math.ceil(radius),k=new Float64Array(2*r+1);let total=0;for(let j=-r;j<=r;j++){let v=Math.exp(-j*j/(2*sigma*sigma));if(Math.abs(j)>radius+.5)v=0;k[j+r]=v;total+=v;}for(let j=0;j<k.length;j++)k[j]/=total;return {k,r};}
+function blur(src,horizontal){let {k,r}=kernel(p.sigma/(horizontal?dx:dy),p.radius/(horizontal?dx:dy)),out=new Float32Array(N);for(let y=0;y<H;y++)for(let x=0;x<W;x++){let v=0;for(let j=-r;j<=r;j++){let xx=horizontal?x+j:x,yy=horizontal?y:y+j;if(xx>=0&&xx<W&&yy>=0&&yy<H)v+=src[yy*W+xx]*k[j+r];}out[y*W+x]=v;}return out;}
+let result=blur(blur(base,true),false),sum=0;for(let i=0;i<N;i++)sum+=result[i];const factor=sum>0?visible/sum/(dx*dy):0;let peak=0,mass=0;for(let i=0;i<N;i++){result[i]*=factor;peak=Math.max(peak,result[i]);mass+=result[i]*dx*dy;}
+postMessage({id,result:result.buffer,W,H,peak,mass,visible,ms:performance.now()-start,p},[result.buffer]);
+}catch(error){postMessage({id,error:String(error)});}};
+`;
+let worker;
+try{worker=new Worker(URL.createObjectURL(new Blob([workerSource],{type:'text/javascript'})));worker.postMessage({init:DATA});}catch(error){$('status').textContent='浏览器未能启动本地计算：'+error;}
+function send(p){busy=true;$('saveImage').disabled=true;$('saveParams').disabled=true;$('status').textContent='正在计算像素密度…';worker.postMessage({id:++sequence,p});}
+function calculate(){if(!worker)return;const p=params();if(busy){pending=p;return;}send(p);}
+if(worker){worker.onmessage=e=>{const r=e.data;busy=false;if(r.error){$('status').textContent='计算失败：'+r.error;return;}if(pending){const next=pending;pending=null;send(next);return;}field=new Float32Array(r.result);FW=r.W;FH=r.H;peak=r.peak;lastResult=r;$('peak').textContent=peak.toFixed(4);if($('auto').checked)$('maximum').value=Math.max(.01,Math.round(peak*100)/100);$('status').textContent=`计算 ${(r.ms/1000).toFixed(2)} 秒 · ${FW}×${FH} 像素浮点场 · 积分 ACE ${r.mass.toFixed(6)} · 总 ACE ${DATA.total_ace.toFixed(6)}`;$('saveImage').disabled=false;$('saveParams').disabled=false;repaint();};worker.onerror=e=>{$('status').textContent='计算线程错误：'+e.message;busy=false;};}
+function schedule(){clearTimeout(timer);$('saveImage').disabled=true;$('saveParams').disabled=true;timer=setTimeout(calculate,120);}
+for(const name of ['sigma','radius','step','opacity']){for(const id of [name,name+'N'])$(id).addEventListener('input',()=>{const input=$(id),min=+input.min,max=+input.max,v=+input.value;if(!Number.isFinite(v)||v<min||v>max)return;$(name).value=v;$(name+'N').value=v;if(name==='opacity')repaint();else schedule();});}
+$('resolution').onchange=schedule;$('auto').onchange=()=>{$('maximum').disabled=$('auto').checked;if($('auto').checked)$('maximum').value=Math.max(.01,Math.round(peak*100)/100);repaint();};$('maximum').oninput=repaint;
+$('saveParams').onclick=()=>download(new Blob([JSON.stringify(settings(),null,2)],{type:'application/json'}),DATA.season+'_ace_parameters.json');
+$('saveImage').onclick=()=>{const out=document.createElement('canvas');out.width=+$('exportSize').value;out.height=DATA.native_size&&out.width===DATA.native_size[0]?DATA.native_size[1]:Math.round(out.width*9/16);draw(out);out.toBlob(blob=>download(blob,DATA.season+'_ace_density.png'),'image/png');};
+$('reset').onclick=()=>{$('background').value='map';$('layers').value='both';for(const [name,value]of [['sigma',3],['radius',15],['step',30],['opacity',.4]]){$(name).value=value;$(name+'N').value=value;}$('auto').checked=true;$('maximum').disabled=true;$('resolution').value='960';calculate();};
+for(const [name,value] of [['sigma',3],['radius',15],['step',30],['opacity',.4]]){$(name).value=value;$(name+'N').value=value;}
+if(DATA.track_overlay){trackOverlay.onload=repaint;trackOverlay.src=DATA.track_overlay;}
+$('background').value=DATA.background||'map';$('layers').value=DATA.layers||'both';$('background').onchange=repaint;$('layers').onchange=repaint;
+map.onload=calculate;map.onerror=()=>{$('status').textContent='内嵌地图加载失败';};map.src=DATA.map;
+// Local verification hook; no external resources or network calls.
+window.acePreview={get state(){return {ready:!!field&&!busy&&!pending,peak,max:limit(),mass:lastResult?.mass,params:settings()};},render:calculate};
+</script>
+</html>

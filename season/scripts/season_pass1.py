@@ -3750,6 +3750,10 @@ def cmd_mux():
     print('final ->', OUTMP4)
 
 def main(argv):
+    if '--help' in argv or '-h' in argv:
+        print('season-plate season-info|season-render --season PROJECT [--assets PATH] [--cache PATH]')
+        print('Options: --size WxH --fps FPS --from DATE --to DATE --limit N --audio 0|1 --out FILE')
+        return
     # storm names and region labels are CJK: never let a legacy console code
     # page (GBK, cp1252 ...) abort a render
     for stream in (sys.stdout, sys.stderr):

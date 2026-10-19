@@ -11,7 +11,7 @@ ROOT = Path(__file__).resolve().parents[1]
 class RendererImportTests(unittest.TestCase):
     def test_source_renderers_import_without_project_data(self):
         code = ('from single.scripts import typhoon_anim; '
-                'from season.scripts import season_pass1, season_overview; '
+                'from season.scripts import season_pass1; from scripts import track_preview as season_overview; '
                 'assert typhoon_anim.theme_col(200, "C5++") == (198,232,255); '
                 'assert season_pass1.theme_col(200, "C5++") == (198,232,255); '
                 'assert season_overview.theme_col(200, "C5++") == (198,232,255)')

@@ -51,21 +51,10 @@
 
 ## 路径绑定
 
-三个脚本都从文件夹而非配置文件解析季节。
-共享资源位于 `<work>/res/SMCY1.3`，缓存在 `<work>/res/_cache`：
-
-    season_pass1.py    SEASON_ROOT / SEASON_ASSETS / SEASON_CACHE constants near
-                       the top of Section B
-    season_overview.py --season / --assets / --out
-    season_pass2.py    --season / --assets / --out
-
-overview 和 pass 2 默认使用 `<work>/season/2020WP` 和
-`<work>/res/SMCY1.3`；pass 1 的常量使用这些相同的路径。
-
-`_bind_paths()` 还会在资源包旁边派生出一个共享缓存
-（`<pack>/../_cache`），而不是放在它里面：`SMCY1.3` 是只读的事实来源，
-绝不能在其中堆积派生帧。提取出的图标和特效片段就放在那里，
-并跨风暴、跨多次运行复用。
+三个入口使用 `--season` 选择项目（默认当前目录）。默认素材位于skill的
+`assets/SMCY1.3`，共享缓存位于其旁的`assets/_cache`。显式相对的
+`--assets`、`--out`、pass 1 的 `--cache` 和 pass 2 视频 `--base`
+以选中的项目目录为基准。源代码和工具按自身位置寻找skill，不依赖工作目录名称。
 
 ## 资源包
 
@@ -100,7 +89,7 @@ pass 2 的条目中有两项值得说明。
 
 ### 阶段 2 - `season_overview.py`
 
-    output/overview/overview.png     1920x1080 by default
+    output/overview/overview.png     native map pixel density by default
     output/overview/NNW.png          one per storm, JTWC-numbered
 
 `--size` 会同时改变两者。`--ss` 对地图裁切做超采样；宽裁切会受益，

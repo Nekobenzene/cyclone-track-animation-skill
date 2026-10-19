@@ -13,7 +13,8 @@ import tempfile
 from types import SimpleNamespace
 import numpy as np
 from single.scripts import typhoon_anim
-from season.scripts import season_pass1, season_overview, season_pass2
+from season.scripts import season_pass1, season_pass2
+from scripts import track_preview as season_overview
 for m in (typhoon_anim, season_pass1, season_pass2):
     assert m.normalize_phase('WV') == 'WV'
     assert m.normalize_phase('DB-WV') == 'WV'
@@ -71,7 +72,7 @@ for m in (typhoon_anim, season_pass1):
     m._phase_at=lambda h: {1:'TC',2:'SD',3:'SS',4:'EX',5:'WV'}[h]
     assert m._ts_fx_hours()==[1,2,3]
 assert season_overview._phase_side('SD',34)=={'SS':1.0}
-assert typhoon_anim._preview_phase_side('SS',30)=={'SD':1.0}
+assert season_overview._phase_side('SS',30)=={'SD':1.0}
 '''
         env=os.environ.copy();env['PYTHONPATH']=os.pathsep.join([str(ROOT/'runtime/python'),str(ROOT)])
         result=subprocess.run([sys.executable,'-c',code],cwd=ROOT,env=env,capture_output=True,text=True)

@@ -15,7 +15,7 @@ of `season_pass1.py` Section B.
 | constant | value | meaning |
 |---|---|---|
 | `REF_W` | 1920 | the width every size ratio is authored at |
-| `W, H` | from `--size` | 1920x1080 default; even numbers only (`yuv420p`) |
+| `W, H` | from `--size` | plate: 21600x10800 default; cards: 1920x1080; even numbers only (`yuv420p`) |
 | `FPS` | from `--fps` | 60 default; 120 for the top-quality master |
 | window | the basin rule | see `season-workflow.md` section 4 |
 | camera | **fixed** | a season has no camera move; that is stage 5 |

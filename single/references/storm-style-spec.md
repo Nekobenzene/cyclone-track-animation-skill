@@ -194,9 +194,8 @@ category at landfall (TS 1.00, C1/C2 0.95, C3 0.70, C4 0.50, C5+ 0.35) so a C5
 strike does not bury a C1 one; everything else uses the tuned values × 2/3, then
 a soft limiter at 0.82.
 
-The phase boundaries (disturbance / tropical cyclone / remnant vortex /
-extratropical) are **derived** from the series - the midpoint between the last
-fix of one phase and the first fix of the next - never hard-coded.
+Type changes take effect at the annotated fix after chronological merging.
+Phase artwork blends visually around that boundary; see [track data](../../references/track-data.md).
 
 ## Ending
 

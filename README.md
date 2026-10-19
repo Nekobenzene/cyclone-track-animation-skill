@@ -21,7 +21,7 @@
 git clone https://github.com/Nekobenzene/cyclone-track-animation-skill
 cd cyclone-track-animation-skill
 python tools\fetch_assets.py --list          # 看有哪些包、各多大
-python tools\fetch_assets.py                 # 默认包，约 1.4 GB
+python tools\fetch_assets.py --pack map,icons,fx,font,runtime,exe # 编译版完整安装
 ```
 
 装完验一遍：
@@ -63,7 +63,7 @@ cyclone-track-animation-skill/
     pack_assets.py              维护者：切分素材包并生成清单
     build_runtime.py            维护者：自行构建 runtime/
   bin/typhoon/
-    typhoon.exe                 single / season 的统一可执行入口
+    typhoon.exe                 渲染、预览、安装及维护工具的统一入口
     _internal/                  编译程序运行库
     source_manifest.json        构建对应的源码哈希
   assets/
@@ -85,6 +85,7 @@ cyclone-track-animation-skill/
   scripts/
     typhoon_app.py              统一入口源码
     build_exe.py                重新构建可执行程序
+    track_preview.py            独立 PNG/HTML 路径与热力预览
 ```
 
 保留完整目录结构。single 和 season 共用素材与运行环境，渲染逻辑分别维护。
@@ -160,10 +161,11 @@ single 的输入在 `<project>/sourcedata/`；season 的输入在 `<project>/sou
 
 | 文件 | 阶段 | 是否必需 |
 |---|---|---|
-| `DB.txt` | 扰动 | 四种路径任选至少一种 |
-| `TC.txt` | 热带气旋 | 四种路径任选至少一种 |
-| `RV.txt` | 残余涡旋 | 四种路径任选至少一种 |
-| `EX.txt` | 温带气旋 | 四种路径任选至少一种 |
+| `DB.txt` / `WV.txt` / `MD.txt` | 扰动／东风波／季风低压 | 任意有效路径至少一种 |
+| `TC.txt` | 热带气旋 | 任意有效路径至少一种 |
+| `RV.txt` | 残余涡旋 | 任意有效路径至少一种 |
+| `EX.txt` | 温带气旋 | 任意有效路径至少一种 |
+| `SD.txt` / `SS.txt` | 副热带气旋，34 kt 为 SD/SS 界限 | 任意有效路径至少一种 |
 
 旧版多文件方式只需提供实际存在的阶段，每个路径点的前五列如下；也可使用下面的统一 `track.txt` 格式：
 
@@ -183,7 +185,7 @@ single 的输入在 `<project>/sourcedata/`；season 的输入在 `<project>/sou
 | 最大持续风速 | kt，节 |
 | 中心最低气压 | hPa |
 
-每个气旋建议至少两个按时间排列的有效点，并提供可用风速、气压。多阶段可按 DB → TC （→ RV） → EX 的生命史顺序衔接，记录不重叠。采样间隔由实际时间决定，常见 3 小时和 6 小时资料都可使用。
+每个气旋建议至少两个按时间排列的有效点，并提供可用风速、气压。类型可以反复变化；跨文件合并后按时间排序。同一时间的冲突记录会报错。采样间隔由实际时间决定，常见 3 小时和 6 小时资料都可使用。
 
 推荐将完整路径放进 `sourcedata/track.txt`，第六列记录类型。支持逐行标注，或仅在首行和类型变化时标注；省略时沿用该文件上一行的类型：
 
@@ -299,6 +301,14 @@ single 的 ACE 仅计算 TC 段内 00/06/12/18 UTC 且风速 ≥34 kt 的采样�
 
 ### 第二步：预览与调整
 
+静态预览可直接调用编译入口 `& $Exe preview single $SingleProject`，
+全季用 `& $Exe preview season $SeasonProject`，交互调参用
+`& $Exe preview html $SeasonProject`。源码入口为 `scripts/track_preview.py`。
+独立选择 `--background map|black|transparent` 与 `--layers both|track|heat`，
+默认地图＋路径＋40%热力，路径在热力上方、完全不透明且无包边。
+按原图像素密度出图；全季与各单旋共享修约到0.01的标尺上限，热力独立计算。
+色标柱不显示刻度，透明底导出RGBA。详细参数和输出见[独立预览](references/preview.md)。
+
 ```powershell
 & $Exe single $SingleProject preview
 & $Exe single $SingleProject test
@@ -308,13 +318,13 @@ single 的 ACE 仅计算 TC 段内 00/06/12/18 UTC 且风速 ≥34 kt 的采样�
 | 命令 | 查看内容 |
 |---|---|
 | `preview` | 按原地图像素密度输出完整路径静态图，尺寸可能大于视频 |
-| `preview-black` | 可选的纯黑底路径预览，输出 `output/preview_black.png`；随时可调用，不是渲染前置步骤 |
+| `preview-black` | 可选的纯黑底预览，输出 `output/preview_black.png`；随时可调用，不是渲染前置步骤 |
 | `test` | 关键时刻的动画检查帧 |
 | `poster` | 峰值附近的代表画面 |
 
 检查路径、取景、字体、时间和事件位置。结尾 `panorama: auto` 自动把路径放在两侧卡片之间、顶部概要条下方。
 
-需要检查路径配色和线型时，随时运行 `& $Exe single $SingleProject preview-black`。
+需要检查路径配色和线型时，随时运行 `& $Exe single $SingleProject preview-black --layers track`。
 也可用源码工具 `python single/scripts/preview_black.py --project <项目目录>`，
 或传入 `--config <YAML>`。黑底版沿用普通 preview 的取景与分辨率，
 不加载地图像素，也不替换 `preview.png`；`render` / `all` 不自动生成黑底版。
@@ -353,7 +363,7 @@ WP02_StormB 示例气旋乙
 
 ```powershell
 & $Exe season-overview info --season $SeasonProject
-& $Exe season-overview all --season $SeasonProject --size 1920x1080
+& $Exe season-overview all --season $SeasonProject --size native
 ```
 
 检查所有气旋的路径覆盖范围。全季图和逐气旋图写入 `output/overview`。
@@ -440,6 +450,21 @@ python "$SkillRoot\scripts\build_exe.py"
 构建使用 pip 和网络下载临时打包工具，更新 `bin/typhoon` 并记录源码哈希；构建前结束使用该 exe 的任务。已构建 exe 使用构建时的代码，源文件改动通过重新构建生效。
 
 素材、字体和地理数据位于外部共享目录，通常无需重编译。字体分发时保留 Saira 与思源黑体的许可证及版权说明，其他素材按各自来源授权使用。
+
+全部生产脚本都编入同一个 `typhoon.exe`，共用一套解释器和运行库：
+
+| 入口 | 用途 |
+|---|---|
+| `single` / `single-config` | 单旋动画 |
+| `season-plate` / `season-cards` / `season-overview` | 全季底片、数据层和兼容预览 |
+| `preview` / `preview-black` | 独立 PNG/HTML 与黑底便捷入口 |
+| `fetch-assets` / `pack-assets` / `publish-release` | 安装、打包、发布 |
+| `build-runtime` / `build-exe` | 重建依赖与程序，需外部Python/pip |
+| `check` | 运行环境及关键资源自检 |
+
+各入口可加 `--help`。构建清单还记录HTML模板的哈希；测试留在 `tests/`，
+使用 `python -m unittest discover -s tests` 执行。地理包内脚本为可选备用源码，
+不属于普通渲染入口。
 
 ### 详细参考
 

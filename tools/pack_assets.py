@@ -20,6 +20,9 @@ import sys
 import time
 import zipfile
 from pathlib import Path
+if not __package__:
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from scripts.build_support import skill_root, python_command
 
 # 包 -> 它拥有的 skill 相对文件/目录。顺序只影响报告输出。
 PACKS = {
@@ -186,8 +189,7 @@ def human(n: float) -> str:
 
 def main() -> int:
     init_stdout()
-    here = Path(__file__).resolve().parent
-    repo = here.parent
+    repo = skill_root()
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--skill", default=str(repo), help="要读取的已安装 skill 根目录（默认为本仓库）")
     ap.add_argument("--out", default=str(repo / "dist"), help="zip 输出目录（默认 <仓库>/dist）")
@@ -226,6 +228,14 @@ def main() -> int:
         "optional_packs": OPTIONAL_PACKS,
         "packs": {},
     }
+    # Partial releases keep unchanged packs at their original immutable URLs.
+    previous = Path(args.manifest)
+    if args.only and previous.is_file():
+        old = json.loads(previous.read_text(encoding='utf-8'))
+        for name, entry in old['packs'].items():
+            entry = dict(entry)
+            entry.setdefault('url', old['url_template'].format(repo=old['repo'], tag=old['tag'], file=entry['file']))
+            manifest['packs'][name] = entry
 
     grand_files = grand_bytes = 0
     for pack in wanted:
@@ -256,14 +266,15 @@ def main() -> int:
             "file_count": len(files),
             "uncompressed_bytes": size,
             "files": entries,
+            "url": manifest['url_template'].format(repo=args.repo, tag=args.tag, file=zip_name),
         }
         grand_files += len(files)
         grand_bytes += size
 
     manifest["totals"] = {
         "packs": len(manifest["packs"]),
-        "file_count": grand_files,
-        "uncompressed_bytes": grand_bytes,
+        "file_count": sum(p['file_count'] for p in manifest['packs'].values()),
+        "uncompressed_bytes": sum(p['uncompressed_bytes'] for p in manifest['packs'].values()),
         "zip_bytes": sum(p["bytes"] for p in manifest["packs"].values()),
         "default_zip_bytes": sum(p["bytes"] for p in manifest["packs"].values() if p["default"]),
         "default_file_count": sum(p["file_count"] for p in manifest["packs"].values() if p["default"]),

@@ -33,6 +33,9 @@ import urllib.error
 import urllib.request
 import zipfile
 from pathlib import Path
+if not __package__:
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from scripts.build_support import skill_root, python_command
 
 CHUNK = 1 << 22
 
@@ -73,7 +76,7 @@ def pack_url(manifest: dict, pack: str, base: str | None) -> str:
         if base.startswith(("http://", "https://", "file://")):
             return base.rstrip("/") + "/" + entry["file"]
         return str(Path(base) / entry["file"])
-    return manifest["url_template"].format(repo=manifest["repo"], tag=manifest["tag"], file=entry["file"])
+    return entry.get('url') or manifest["url_template"].format(repo=manifest["repo"], tag=manifest["tag"], file=entry["file"])
 
 
 def open_source(url: str, proxy: str | None, timeout: float):
@@ -248,8 +251,7 @@ def install(pack: str, manifest: dict, dest: Path, args) -> str:
 
 def main() -> int:
     init_stdout()
-    here = Path(__file__).resolve().parent
-    repo = here.parent
+    repo = skill_root()
     ap = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="完整说明见仓库根目录的 DOWNLOAD.md")

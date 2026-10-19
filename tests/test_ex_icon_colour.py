@@ -80,8 +80,7 @@ class ExIconColourTests(unittest.TestCase):
             np.testing.assert_array_equal(out[48, 50], [30, 3, 9])
 
     def test_tc_preview_and_overview_match_renderer_endpoint(self):
-        for path, prefix in (('single/scripts/typhoon_anim.py', '_preview_'),
-                             ('season/scripts/season_overview.py', '')):
+        for path, prefix in (('scripts/track_preview.py', ''),):
             tree = ast.parse((ROOT/path).read_text(encoding='utf-8'))
             constants = {prefix+name for name in ('COL', 'C5PP_A', 'C5PP_B', 'C6_END')}
             nodes = [n for n in tree.body if

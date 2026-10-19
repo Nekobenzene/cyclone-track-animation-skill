@@ -23,7 +23,7 @@ already above threshold and equality plateaus are included. Keep existing
 gains and fade-in/out inside each run. Existing WAV/MP4 files require audio
 regeneration/muxing to receive this fix.
 
-Run `python scripts/check_audio_intervals.py` for seven regression scenarios,
+Run `python -m unittest discover -s tests -p test_audio_intervals.py` for seven regression scenarios,
 including multi-peak dips and threshold plateaus.
 
 ## Validation

@@ -23,6 +23,9 @@ import tempfile
 import urllib.request
 import zipfile
 from pathlib import Path
+if not __package__:
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from scripts.build_support import skill_root, python_command
 
 # 官方发布的 runtime 包里带的是 ffmpeg-9.0.1-full_build。
 FFMPEG_HINT = "https://www.gyan.dev/ffmpeg/builds/  （ffmpeg-release-full.7z / -full-shared.zip）"
@@ -43,11 +46,11 @@ def run(cmd: list[str]) -> int:
     return subprocess.call(cmd)
 
 
-def install_deps(repo: Path, cross: str | None) -> int:
+def install_deps(repo: Path, cross: str | None, python=None) -> int:
     target = repo / "runtime" / "python"
     target.mkdir(parents=True, exist_ok=True)
     req = repo / "requirements.txt"
-    base = [sys.executable, "-m", "pip", "install", "--upgrade", "--target", str(target), "-r", str(req)]
+    base = python_command(python) + ["-m", "pip", "install", "--upgrade", "--target", str(target), "-r", str(req)]
     if cross:
         base += ["--python-version", cross, "--implementation", "cp", "--platform", "win_amd64", "--only-binary=:all:"]
         print(f"  正在为 CPython {cross} win_amd64 获取 wheel（这些包在当前解释器里无法导入）")
@@ -105,13 +108,13 @@ def copy_ffmpeg(repo: Path, source: str) -> int:
 
 def main() -> int:
     init_stdout()
-    here = Path(__file__).resolve().parent
-    repo = here.parent
+    repo = skill_root()
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--repo", default=str(repo), help="要构建到哪个 skill 根目录（默认为本仓库）")
     ap.add_argument("--cross", default=None, help="为其他 CPython 版本取 wheel，例如 3.12")
     ap.add_argument("--ffmpeg", default=None, help="目录、zip 下载地址，或 'path'（从系统 PATH 复制）")
     ap.add_argument("--skip-deps", action="store_true", help="跳过 pip 安装")
+    ap.add_argument("--python", help="External Python executable for pip")
     args = ap.parse_args()
 
     root = Path(args.repo).resolve()
@@ -125,7 +128,7 @@ def main() -> int:
         elif sys.platform != "win32" or version[:2] != (3, 12):
             print("  注意：发布的脚本针对 Windows x64 CPython 3.12；"
                   "为当前解释器构建的 wheel 可能与那个运行库不一致。")
-        if install_deps(root, args.cross) != 0:
+        if install_deps(root, args.cross, args.python) != 0:
             print("  ! pip 失败；runtime/python 不完整", file=sys.stderr)
             return 1
 

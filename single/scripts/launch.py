@@ -8,7 +8,18 @@ def main(argv=None, renderer_module=None):
     parser.add_argument('command', nargs='?', default='all',
                         choices=['all','info','preview','preview-black','assets','render','audio','mux','poster','test'])
     parser.add_argument('--assets', type=Path, help='Shared SMCY1.3 asset folder')
+    parser.add_argument('--background',choices=['map','black','transparent'])
+    parser.add_argument('--layers',choices=['both','track','heat'])
+    parser.add_argument('--size',help='Static preview size: native or WxH')
+    parser.add_argument('--heat-parameters')
     args = parser.parse_args(argv)
+    preview_flags=[]
+    for key in ('background','layers','size','heat_parameters'):
+        value=getattr(args,key)
+        if value is not None:preview_flags += ['--'+key.replace('_','-'),value]
+    if preview_flags and args.command not in ('preview','preview-black'):
+        parser.error('Background/layers/size/heat parameters apply to static preview commands')
+
     shared = Path(os.environ.get('TYPHOON_SKILL_ROOT') or Path(__file__).resolve().parents[2])
     skill = shared/'single'
     deps = shared/'runtime/python'
@@ -70,10 +81,10 @@ def main(argv=None, renderer_module=None):
         with config.open('x',encoding='utf-8') as f:
             yaml.safe_dump(cfg,f,allow_unicode=True,sort_keys=False)
     if renderer_module is not None:
-        renderer_module.main(['--config', str(config), args.command])
+        renderer_module.main(['--config',str(config),args.command]+preview_flags)
     else:
         subprocess.run([sys.executable,'-u',str(skill/'scripts/typhoon_anim.py'),
-                        '--config',str(config),args.command],check=True)
+                        '--config',str(config),args.command]+preview_flags,check=True)
 
 if __name__ == '__main__':
     main()

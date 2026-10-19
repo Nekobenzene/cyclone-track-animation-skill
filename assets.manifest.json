@@ -1,8 +1,8 @@
 {
  "schema": 1,
- "generated": "2026-10-18T00:02:05Z",
+ "generated": "2026-10-19T05:18:51Z",
  "repo": "Nekobenzene/cyclone-track-animation-skill",
- "tag": "assets-v1",
+ "tag": "assets-v2",
  "url_template": "https://github.com/{repo}/releases/download/{tag}/{file}",
  "default_packs": [
   "map",
@@ -101,7 +101,8 @@
      "bytes": 6000422,
      "sha256": "31357383877815a349ed60d5e3368864149fdbf1ed24e578ca5cf7a94d6361d8"
     }
-   ]
+   ],
+   "url": "https://github.com/Nekobenzene/cyclone-track-animation-skill/releases/download/assets-v1/smcy13-map.zip"
   },
   "icons": {
    "file": "smcy13-icons.zip",
@@ -447,12 +448,13 @@
      "bytes": 1624464,
      "sha256": "995baa19af42d32be658cff7106f1335db2b886879a9dcc47c3ec2f0356afaa2"
     }
-   ]
+   ],
+   "url": "https://github.com/Nekobenzene/cyclone-track-animation-skill/releases/download/assets-v1/smcy13-icons.zip"
   },
   "fx": {
    "file": "smcy13-fx.zip",
    "bytes": 48733261,
-   "sha256": "185ff9097af5178e843804d98a9292ad2e1b775a9a6dc9b94702bf1102a52442",
+   "sha256": "d418b0921b2fdbeca8b3d116c77404915ee4d50629ab6f109e5a91b1eec4e6eb",
    "description": "登陆特效、粒子、GUI、ACE 标尺、音效与强度表",
    "default": true,
    "file_count": 156,
@@ -1238,7 +1240,8 @@
      "bytes": 3932,
      "sha256": "9a7e5d0ca7710b11c7606ca4b12a407bfa7c83f9b9c2cdcacdff5444124f3d5e"
     }
-   ]
+   ],
+   "url": "https://github.com/Nekobenzene/cyclone-track-animation-skill/releases/download/assets-v2/smcy13-fx.zip"
   },
   "font": {
    "file": "smcy13-font.zip",
@@ -3369,7 +3372,8 @@
      "bytes": 112360,
      "sha256": "5c759178c6d339f4e9bc7064f1139b4250730e184c2eb2613c2a00a27634aa6c"
     }
-   ]
+   ],
+   "url": "https://github.com/Nekobenzene/cyclone-track-animation-skill/releases/download/assets-v1/smcy13-font.zip"
   },
   "legacy": {
    "file": "smcy13-legacy.zip",
@@ -3505,7 +3509,8 @@
      "bytes": 17612807,
      "sha256": "c8e5341a00f29b0c6e855c5a4649ee324dd366b8a18e76e7147e543059e1d7f1"
     }
-   ]
+   ],
+   "url": "https://github.com/Nekobenzene/cyclone-track-animation-skill/releases/download/assets-v1/smcy13-legacy.zip"
   },
   "geo": {
    "file": "geo-optional.zip",
@@ -3581,7 +3586,8 @@
      "bytes": 4640654,
      "sha256": "9c55b6bb2542ab1b63493530db83a7295e80a45cb59e498132c29626e6983ed4"
     }
-   ]
+   ],
+   "url": "https://github.com/Nekobenzene/cyclone-track-animation-skill/releases/download/assets-v1/geo-optional.zip"
   },
   "runtime": {
    "file": "runtime-win64.zip",
@@ -9192,16 +9198,17 @@
      "bytes": 2573,
      "sha256": "953408cd2570f0c83dc2fe39f7e4e388e41eeb05738aa69196a5f6ffcf6ba79e"
     }
-   ]
+   ],
+   "url": "https://github.com/Nekobenzene/cyclone-track-animation-skill/releases/download/assets-v1/runtime-win64.zip"
   },
   "exe": {
    "file": "exe-win64.zip",
-   "bytes": 209264760,
-   "sha256": "7610020ce81b996c21506acb6ceceb8be2570f1b9d93d571d1e92499ad5e38db",
+   "bytes": 209312576,
+   "sha256": "9eb95997223b2c65f04286ea7546f4109abdf5b89a689940b84a9a3e95350d06",
    "description": "打包好的 typhoon.exe，自带 Python 解释器",
    "default": false,
    "file_count": 121,
-   "uncompressed_bytes": 209395047,
+   "uncompressed_bytes": 209443136,
    "files": [
     {
      "path": "bin/typhoon/_internal/PIL/_avif.cp312-win_amd64.pyd",
@@ -9546,7 +9553,7 @@
     {
      "path": "bin/typhoon/_internal/base_library.zip",
      "bytes": 1333490,
-     "sha256": "7410591a011fbc18a2a869eb3ab022eaf7b5aa4d8a9db6e6188ebb8927361103"
+     "sha256": "b97ab6ed8c1ee0828a44672739624aa22e2f54bcfd5a002b1ca9312c373e3836"
     },
     {
      "path": "bin/typhoon/_internal/charset_normalizer/cd.cp312-win_amd64.pyd",
@@ -9800,22 +9807,23 @@
     },
     {
      "path": "bin/typhoon/source_manifest.json",
-     "bytes": 953,
-     "sha256": "74e7f79522707e056abffd182cf9b327a702218c43e0d6afb4e5542207a0a646"
+     "bytes": 1524,
+     "sha256": "dd1e0a8ece9a899c0ea354a90b2867d30e2b84c9e9bb61f55c1b8a7b8b2591a3"
     },
     {
      "path": "bin/typhoon/typhoon.exe",
-     "bytes": 5721661,
-     "sha256": "8b0a33dac0d6e57e540a39125f719d34d3bbce400e322c8a869e77a41bc6465a"
+     "bytes": 5769179,
+     "sha256": "225528ddb9f5a2b5eef033aea990e57a81faf2d900c6e000fa894901bcabc1b4"
     }
-   ]
+   ],
+   "url": "https://github.com/Nekobenzene/cyclone-track-animation-skill/releases/download/assets-v2/exe-win64.zip"
   }
  },
  "totals": {
   "packs": 8,
   "file_count": 1941,
-  "uncompressed_bytes": 2483831203,
-  "zip_bytes": 2468548763,
+  "uncompressed_bytes": 2483879292,
+  "zip_bytes": 2468596579,
   "default_zip_bytes": 1480535754,
   "default_file_count": 1782
  }

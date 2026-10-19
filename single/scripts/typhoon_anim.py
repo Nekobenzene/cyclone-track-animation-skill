@@ -3785,357 +3785,18 @@ def build_audio():
 # drivers
 # ----------------------------------------------------------------------------
 
-# ----------------------------------------------------------------------------
-# Still overview: copied from season pass 1's basin rules and stage 2 overview.
-# Kept local so single remains self-contained; no imports of season scripts.
-# ----------------------------------------------------------------------------
-_preview_BASIN_PAD_N, _preview_BASIN_PAD_S, _preview_BASIN_PAD_E, _preview_BASIN_PAD_W = (5.0, 10.0, 5.0, 5.0)
-_preview_BASIN_META = None
+def cmd_preview(black_background=False,background=None,layers=None,size='native',heat_parameters=None):
+    """Static preview composition shared with the standalone preview entry."""
+    if _SKILL_SHARED not in sys.path:sys.path.insert(0,_SKILL_SHARED)
+    from scripts.track_preview import render_bound_single
+    saved={}
+    if heat_parameters:
+        with open(heat_parameters,encoding='utf-8') as f:saved=json.load(f)
+    background=background or ('black' if black_background else saved.get('background','map'))
+    layers=layers or saved.get('layers','both')
+    return render_bound_single(sys.modules[__name__],background,layers,size,OUTDIR,
+                               heat_parameters,stem='preview_black' if black_background else 'preview')
 
-def _preview_basins():
-    """{name: dict(w, h, ppd, lon0, lon1, lat0, lat1, file)} from basins.json"""
-    global _preview_BASIN_META
-    if _preview_BASIN_META is None:
-        p = os.path.join(ASSETS, 'map', 'basins.json')
-        if not os.path.isfile(p):
-            raise SystemExit('map/basins.json not found: %s' % p)
-        raw = json.load(open(p, encoding='utf-8'))
-        out, miss = ({}, [])
-        for name, m in (raw.get('maps') or {}).items():
-            f = os.path.join(ASSETS, 'map', 'basins', m.get('file') or name + '.png')
-            if not os.path.isfile(f):
-                miss.append(name)
-                continue
-            w, h = (int(m['size'][0]), int(m['size'][1]))
-            lon0, lon1 = (float(m['lon'][0]), float(m['lon'][1]))
-            lat0, lat1 = (float(m['lat'][0]), float(m['lat'][1]))
-            if abs(w / (lon1 - lon0) - h / (lat1 - lat0)) > 0.01:
-                print('  basin %-6s window and image disagree - skipped' % name)
-                continue
-            out[name] = dict(name=name, file=f, w=w, h=h, ppd=w / (lon1 - lon0), lon0=lon0, lon1=lon1, lat0=lat0, lat1=lat1)
-        if not out:
-            raise SystemExit('no usable basin map under %s' % os.path.join(ASSETS, 'map', 'basins'))
-        if miss:
-            print('  basins listed but missing on disk: %s' % ', '.join(miss))
-        _preview_BASIN_META = out
-    return _preview_BASIN_META
-
-def _preview_area(lon0, lon1, lat0, lat1):
-    return max(0.0, lon1 - lon0) * max(0.0, lat1 - lat0)
-
-def _preview_coverage(b, lon0, lon1, lat0, lat1):
-    """covered area / map area for one basin"""
-    i0 = max(lon0, b['lon0'])
-    i1 = min(lon1, b['lon1'])
-    j0 = max(lat0, b['lat0'])
-    j1 = min(lat1, b['lat1'])
-    return _preview_area(i0, i1, j0, j1) / _preview_area(b['lon0'], b['lon1'], b['lat0'], b['lat1'])
-
-def _preview_pick_basin(lon_min, lon_max, lat_min, lat_max, verbose=True, fit=None, win=(-180.0, 180.0, -90.0, 90.0)):
-    """the basin with the largest covered-area / map-area ratio
-
-    The window is the basin's own rectangle UNION the track grown by the
-    padding, so the basin stays the authority and the padding is the patch.
-    `fit` is the frame (w, h) the stills/video will use: the window is grown
-    about its own centre to that aspect.
-    """
-    bs = _preview_basins()
-    lo0, lo1 = (lon_min - _preview_BASIN_PAD_W, lon_max + _preview_BASIN_PAD_E)
-    la0, la1 = (lat_min - _preview_BASIN_PAD_S, lat_max + _preview_BASIN_PAD_N)
-    rank = sorted(((_preview_coverage(b, lo0, lo1, la0, la1), b) for b in bs.values()), key=lambda r: -r[0])
-    top = [r for r in rank if r[0] > 0.0]
-    if top:
-        if verbose:
-            print('  basin %-7s %.4f (next %s %.4f)  track lon %.1f..%.1f lat %.1f..%.1f' % (top[0][1]['name'], top[0][0], top[1][1]['name'] if len(top) > 1 else '-', top[1][0] if len(top) > 1 else 0.0, lon_min, lon_max, lat_min, lat_max))
-        return top[0][1]
-    fb = bs.get('EARTH') or max(bs.values(), key=lambda b: b['w'] * b['h'])
-    if verbose:
-        print('  basin: nothing covers lon %.1f..%.1f lat %.1f..%.1f - using %s' % (lon_min, lon_max, lat_min, lat_max, fb['name']))
-    return fb
-
-def _preview_basin_window(b, lon_min, lon_max, lat_min, lat_max):
-    """the basin's own window UNION the track grown by the padding"""
-    return (min(b['lon0'], lon_min - _preview_BASIN_PAD_W), max(b['lon1'], lon_max + _preview_BASIN_PAD_E), min(b['lat0'], lat_min - _preview_BASIN_PAD_S), max(b['lat1'], lat_max + _preview_BASIN_PAD_N))
-
-def _preview_fit_aspect(win, w, h):
-    """grow `win` about its centre until its degree aspect matches the frame
-
-    This only ever ENLARGES the window, so the basin and the track always stay
-    inside the frame; it is what stops the map from being stretched to fill it.
-    """
-    lon0, lon1, lat0, lat1 = win
-    want = float(w) / float(h)
-    sw, sh = (lon1 - lon0, lat1 - lat0)
-    cx, cy = (0.5 * (lon0 + lon1), 0.5 * (lat0 + lat1))
-    if sw / sh < want:
-        half = math.ceil(0.5 * sh * want * 100.0) / 100.0
-        lon0, lon1 = (cx - half, cx + half)
-    else:
-        half = math.ceil(0.5 * sw / want * 100.0) / 100.0
-        lat0, lat1 = (cy - half, cy + half)
-    return (lon0, lon1, lat0, lat1)
-
-class _preview_MapSource:
-    """crops windows out of the whole-world sheet, at its native resolution"""
-
-    def __init__(self, ps, assets, basin, ss=2):
-        self.ss = max(1, int(ss))
-        self.basin = basin
-        self.world = ps._preview_basins().get('EARTH') or basin
-        p = self.world['file']
-        if not os.path.isfile(p):
-            raise SystemExit('map not found: %s' % p)
-        Image.MAX_IMAGE_PIXELS = None
-        self.im = Image.open(p).convert('RGB')
-        self.native = self.im.size
-        self._cache = {}
-        print('  sheet %s  %dx%d  %.1f px/deg   (basin rule -> %s)' % (os.path.basename(p), self.native[0], self.native[1], self.world['ppd'], basin['name']))
-
-    def _crop_layer(self, lon0, lon1, lat0, lat1, W, H, allow_up):
-        """the window, returned exactly WxH.
-
-        The integer floor/ceil box around the window is cropped at the sheet's
-        own resolution; PIL's float `box` then takes the sub-pixel edges; one
-        final LANCZOS step lands on the exact frame size.  `allow_up` lets a wide
-        overview supersample, while a narrow crop - which already has more source
-        pixels than it needs - never upsamples.
-        """
-        key = (round(lon0, 4), round(lon1, 4), round(lat0, 4), round(lat1, 4), W, H, allow_up)
-        if key in self._cache:
-            return self._cache[key]
-        b = self.world
-        im = self.im
-        nw, nh = im.size
-        ppd = b['ppd']
-        fx0, fx1 = ((lon0 - b['lon0']) * ppd, (lon1 - b['lon0']) * ppd)
-        fy0, fy1 = ((b['lat1'] - lat1) * ppd, (b['lat1'] - lat0) * ppd)
-        if fx0 < 0.0 or fx1 > nw or fy0 < 0.0 or (fy1 > nh):
-            print('  ! window lon %.1f..%.1f lat %.1f..%.1f leaves the world sheet' % (lon0, lon1, lat0, lat1))
-        fx0 = max(0.0, min(nw - 1.0, fx0))
-        fx1 = max(1.0, min(float(nw), fx1))
-        fy0 = max(0.0, min(nh - 1.0, fy0))
-        fy1 = max(1.0, min(float(nh), fy1))
-        ix0, ix1 = (int(math.floor(fx0)), int(math.ceil(fx1)))
-        iy0, iy1 = (int(math.floor(fy0)), int(math.ceil(fy1)))
-        ix0 = max(0, min(nw - 2, ix0))
-        ix1 = min(nw, max(ix0 + 1, ix1))
-        iy0 = max(0, min(nh - 2, iy0))
-        iy1 = min(nh, max(iy0 + 1, iy1))
-        cw, ch = (ix1 - ix0, iy1 - iy0)
-        sub = (fx0 - ix0, fy0 - iy0, fx1 - ix0, fy1 - iy0)
-        scale = 1
-        if allow_up > 1:
-            scale = max(1, min(int(allow_up), int(math.ceil(W / float(cw)))))
-        crop = im.crop((ix0, iy0, ix1, iy1))
-        if scale > 1:
-            crop = crop.resize((cw * scale, ch * scale), Image.BICUBIC)
-        out = crop.resize((W, H), Image.LANCZOS, box=tuple((v * scale for v in sub))).convert('RGB')
-        if out.size != (W, H):
-            out = out.resize((W, H), Image.LANCZOS)
-        self._cache[key] = out
-        return out
-
-    def crop(self, lon0, lon1, lat0, lat1, W, H, basin=None):
-        """RGB array (H,W,3) of the world sheet over the window"""
-        return np.asarray(self._crop_layer(lon0, lon1, lat0, lat1, int(W), int(H), self.ss), dtype=np.uint8)
-
-def _preview_make_proj(lon0, lon1, lat0, lat1, W, H):
-
-    def proj(lon, lat):
-        return ((lon - lon0) / (lon1 - lon0) * W, (lat1 - lat) / (lat1 - lat0) * H)
-    return proj
-_preview_BANDS = [('TD', 0, 33), ('TS', 34, 63), ('C1', 64, 82), ('C2', 83, 95), ('C3', 96, 112), ('C4', 113, 136), ('C5', 137, 155), ('C5+', 156, 169), ('C5++', 170, 999)]
-_preview_TRANS_K = 3.5
-_preview_ICON_BLEND_KT = 14.0
-_preview_TRANS_H = 2.5
-_preview_COL = {'DB': (206, 220, 236), 'TD': (196, 220, 255), 'TS': (58, 226, 92), 'C1': (255, 232, 40), 'C2': (255, 158, 30), 'C3': (244, 86, 32), 'C4': (232, 34, 28), 'C5': (255, 60, 226), 'C5+': (214, 106, 255), 'RV': (176, 192, 214), 'EX': (152, 172, 214)}
-_preview_COL.update({k: COL[k] for k in ('WV', 'MD', 'SD', 'SS')})
-_preview_C5PP_A = np.array([126, 44, 176], dtype=np.float32)
-_preview_C5PP_B = np.array([40, 74, 178], dtype=np.float32)
-_preview_C6_END = np.array([198, 232, 255], dtype=np.float32)
-
-def _preview_theme_col(wind, lvl):
-    """155 kt+ uses the super-cyclone ramp: pink-purple -> deep blue at 185 kt
-    -> ACE fill endpoint (#C6E8FF) at 200 kt, linear in between"""
-    if lvl == 'C5++' and wind > 200:
-        return palette_colour(wind, HIGHWIND_BODY)
-    if lvl == 'C5++':
-        if wind <= 185.0:
-            t = min(1.0, max(0.0, (wind - 170.0) / 15.0))
-            return tuple((int(v) for v in _preview_C5PP_A * (1 - t) + _preview_C5PP_B * t))
-        t = min(1.0, (wind - 185.0) / 15.0)
-        return tuple((int(v) for v in _preview_C5PP_B * (1 - t) + _preview_C6_END * t))
-    return _preview_COL.get(lvl, (220, 220, 220))
-
-def _preview_intensity_weights(w):
-    out = {}
-    for lvl, lo, hi in _preview_BANDS:
-        d = max(0.0, lo - w, w - hi)
-        a = math.exp(-(d / _preview_ICON_BLEND_KT) ** 2)
-        if a > 0.004:
-            out[lvl] = a
-    tot = sum(out.values())
-    if tot <= 0.0:
-        return {_preview_BANDS[-1][0]: 1.0}
-    return {k: v / tot for k, v in out.items()}
-
-def _preview_phase_side(ph, w):
-    return _preview_intensity_weights(w) if ph == 'TC' else {level_of(w, ph): 1.0}
-
-def _preview_state_weights(ps, h, w):
-    for hb, pa, pb in ps.PHASE_BOUNDS:
-        if abs(h - hb) <= _preview_TRANS_H:
-            t = (h - (hb - _preview_TRANS_H)) / (2.0 * _preview_TRANS_H)
-            out = {}
-            for k, v in _preview_phase_side(pa, w).items():
-                out[k] = out.get(k, 0.0) + v * (1.0 - t)
-            for k, v in _preview_phase_side(pb, w).items():
-                out[k] = out.get(k, 0.0) + v * t
-            return out
-    ph = _preview_phase_at(ps, h)
-    base = _preview_intensity_weights(w) if ph == 'TC' else {level_of(w, ph): 1.0}
-    for h0, h1, _l0, _l1, _fx in ps.RI_EVENTS:
-        if h0 <= h <= h1 and h1 > h0:
-            e = 1.0 / max(1e-06, ps.RI_BLEND_FRAC)
-            out = {k: v ** e for k, v in base.items()}
-            tot = sum(out.values()) or 1.0
-            return {k: v / tot for k, v in out.items()}
-    return base
-
-def _preview_phase_at(ps, h):
-    ph = ps.PHASE_BOUNDS[0][1] if ps.PHASE_BOUNDS else ps.S.phase[0]
-    for hb, pa, pb in ps.PHASE_BOUNDS:
-        if h > hb:
-            ph = pb
-    return ph
-
-def _preview_state_color(ps, h, w, sw):
-    c = np.zeros(3, dtype=np.float32)
-    tot = sum(sw.values()) or 1.0
-    for lvl, wt in sw.items():
-        c += wt / tot * np.array(track_theme_col(w, lvl), dtype=np.float32)
-    return tuple((int(v) for v in np.clip(c, 0, 255)))
-
-def _preview_sample(ps, h):
-    """the pass 1 sampler, bound to the storm currently installed in `ps`"""
-    S = ps.S
-    h = float(max(0.0, min(S.duration_h, h)))
-    i = int(np.searchsorted(S.hours, h, 'right')) - 1
-    i = max(0, min(len(S.hours) - 2, i)) if len(S.hours) > 1 else 0
-    span = float(S.hours[i + 1] - S.hours[i]) if len(S.hours) > 1 else 1.0
-    s = 0.0 if span <= 0 else (h - S.hours[i]) / span
-
-    def cr(arr):
-        p1 = arr[i]
-        p0 = arr[max(0, i - 1)]
-        p2 = arr[min(len(arr) - 1, i + 1)]
-        p3 = arr[min(len(arr) - 1, i + 2)]
-        return 0.5 * (2 * p1 + (-p0 + p2) * s + (2 * p0 - 5 * p1 + 4 * p2 - p3) * s * s + (-p0 + 3 * p1 - 3 * p2 + p3) * s * s * s)
-    lon = cr(S.lon)
-    lat = cr(S.lat)
-    wind = float(S.WF(h))
-    pres = float(S.PF(h))
-    ace = float(np.interp(h, S.hours, S.ace))
-    ph = S.phase[min(len(S.phase) - 1, int(np.searchsorted(S.hours, h, 'right')) - 1)]
-    return (lon, lat, wind, pres, ace, ph)
-
-def _preview_dashed(d, pts, fill, width, dash=16, gap=11):
-    on, acc = (True, 0.0)
-    for i in range(1, len(pts)):
-        x0, y0 = pts[i - 1]
-        x1, y1 = pts[i]
-        seg = math.hypot(x1 - x0, y1 - y0)
-        if seg <= 0.01:
-            continue
-        t = 0.0
-        while t < seg - 0.01:
-            want = dash if on else gap
-            step = min(want - acc, seg - t)
-            if on and step > 0.5:
-                xa = x0 + (x1 - x0) * (t / seg)
-                ya = y0 + (y1 - y0) * (t / seg)
-                xb = x0 + (x1 - x0) * ((t + step) / seg)
-                yb = y0 + (y1 - y0) * ((t + step) / seg)
-                d.line([xa, ya, xb, yb], fill=fill, width=width)
-            t += step
-            acc += step
-            if acc >= want - 1e-06:
-                on = not on
-                acc = 0.0
-
-def _preview_trail(ps, ov, hours, proj, sc, trail_mul):
-    """pass 1's `trail()` with the fix markers left out.
-
-    The preview-only trail uses 30% of the original width: no outer stroke, intensity-coloured inner
-    stroke whose colour is sampled continuously and whose patterns distinguish
-    the cyclone families. Per-fix markers are omitted.
-    """
-    S = ps.S
-    d = ImageDraw.Draw(ov)
-    w_in = max(1, int(round(6 * trail_mul * sc * 0.30)))
-    a_in = 255
-    pts = []
-    h = 0.0
-    while h < hours - 1e-06:
-        h = min(hours, h + 0.8)
-        lo, la, w, p, a, ph = _preview_sample(ps, h)
-        pts.append((h, lo, la))
-    lo, la, w, p, a, ph = _preview_sample(ps, hours)
-    pts.append((hours, lo, la))
-    cols = []
-    for hh, _, _ in pts:
-        _, _, ww, _, _, _ = _preview_sample(ps, hh)
-        cols.append(_preview_state_color(ps, hh, ww, _preview_state_weights(ps, hh, ww)))
-    xy = [proj(p[1], p[2]) for p in pts]
-    phases = [_preview_phase_at(ps, point[0]) for point in pts]
-    draw_track_segments(d, xy, cols, phases, w_in)
-
-
-def _preview_style_scale(win, W, ps):
-    """the renderer's own line-weight rule:
-           SC = (px per degree) / (1920 / SPAN0_LON)
-    A follow camera draws 1920 px over 22.8 deg; a season still draws W px over
-    the whole crop, so its line is thinner by exactly that ratio."""
-    ppd = W / float(win[1] - win[0])
-    return ppd / (1920.0 / 22.8)
-
-def cmd_preview(black_background=False):
-    """Write a track preview without decoding effects or encoding video."""
-    ps = sys.modules[__name__]
-    width, height = 1920, 1080
-    extent = (float(S.lon.min()), float(S.lon.max()),
-              float(S.lat.min()), float(S.lat.max()))
-    basin = _preview_pick_basin(*extent, fit=(width, height))
-    window = _preview_fit_aspect(_preview_basin_window(basin, *extent), width, height)
-    # Keep the established window; output at the source sheet's native density.
-    source = _preview_basins().get('EARTH') or basin
-    width = max(1, int(round((window[1] - window[0]) * source['ppd'])))
-    height = max(1, int(round((window[3] - window[2]) * source['ppd'])))
-    print('  native preview %dx%d at %.1f px/deg' % (width, height, source['ppd']))
-    maps = None if black_background else _preview_MapSource(ps, ASSETS, basin, ss=1)
-    try:
-        frame = (Image.new('RGBA', (width, height), (0, 0, 0, 255))
-                 if black_background else
-                 Image.fromarray(maps.crop(*window, width, height)).convert('RGBA'))
-        projection = _preview_make_proj(*window, width, height)
-        layer = Image.new('RGBA', frame.size, (0, 0, 0, 0))
-        scale = _preview_style_scale(window, width, ps)
-        _preview_trail(ps, layer, float(S.duration_h), projection, scale, 3.0)
-        frame.alpha_composite(layer)
-        stem = 'preview_black' if black_background else 'preview'
-        path = os.path.join(OUTDIR, stem + '.png')
-        temporary = os.path.join(BUILD, stem + '.pending.png')
-        try:
-            frame.convert('RGB').save(temporary, format='PNG')
-            os.replace(temporary, path)
-        finally:
-            if os.path.isfile(temporary): os.remove(temporary)
-        print('preview -> %s  basin %s  lon %.2f..%.2f lat %.2f..%.2f' %
-              ((path, basin['name']) + tuple(window)))
-        return path
-    finally:
-        if maps is not None:
-            maps.im.close()
 
 def cmd_assets():
     extract_icons(); extract_fx(); extract_ex_lightning(); extract_cloud()
@@ -4229,6 +3890,10 @@ def cmd_mux():
     print('final ->', OUTMP4)
 
 def main(argv):
+    if '--help' in argv or '-h' in argv:
+        print(__doc__)
+        print('Static preview options: --background map|black|transparent --layers both|track|heat --size native|WxH --heat-parameters FILE')
+        return
     # storm names and region labels are CJK: never let a legacy console code
     # page (GBK, cp1252 ...) abort a render
     for stream in (sys.stdout, sys.stderr):
@@ -4238,8 +3903,15 @@ def main(argv):
             pass
     cfg_path, cmd = 'typhoon.yaml', 'all'
     i, positional = 0, []
+    preview_options={}
     while i < len(argv):
         a = argv[i]
+        option=a.split('=',1)[0]
+        if option in ('--background','--layers','--size','--heat-parameters'):
+            if '=' in a:value=a.split('=',1)[1];i+=1
+            else:value=argv[i+1];i+=2
+            preview_options[option[2:].replace('-','_')]=value
+            continue
         if a == '--config':
             cfg_path = argv[i + 1]; i += 2; continue
         if a.startswith('--config='):
@@ -4256,9 +3928,9 @@ def main(argv):
           (_S.get('id', ''), _S.get('name_en', ''), len(S.hours),
            S.duration_h, S.ace_total))
     if cmd == 'preview':
-        cmd_preview()
+        cmd_preview(**preview_options)
     elif cmd == 'preview-black':
-        cmd_preview(black_background=True)
+        cmd_preview(black_background=True,**preview_options)
     elif cmd == 'assets':
         cmd_assets()
     elif cmd == 'test':

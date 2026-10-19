@@ -13,10 +13,11 @@ class TrackStyleTests(unittest.TestCase):
         code = r'''
 from PIL import Image, ImageDraw
 from single.scripts import typhoon_anim as a
+from scripts import track_preview as p
 from types import SimpleNamespace
 assert set(a.TRACK_PATTERNS) == {'DB', 'WV', 'MD', 'RV'}
 for phase in ('DB', 'WV', 'MD', 'SD', 'SS', 'TC', 'EX', 'RV'):
-    assert a._preview_phase_at(SimpleNamespace(PHASE_BOUNDS=[], S=SimpleNamespace(phase=[phase])), 0) == phase
+    assert p._phase_at(SimpleNamespace(PHASE_BOUNDS=[], S=SimpleNamespace(phase=[phase])), 0) == phase
 points = [(x, 10) for x in range(300)]
 colours = [(255, 0, 0) if x < 150 else (0, 255, 0) for x in range(300)]
 for phase in ('DB', 'WV', 'MD', 'RV'):

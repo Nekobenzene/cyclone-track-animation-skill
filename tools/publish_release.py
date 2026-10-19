@@ -8,21 +8,32 @@
 token 依次从 --token-file、环境变量 GH_TOKEN、GITHUB_TOKEN 读取，需要对目标仓库
 具备 `Contents: Read and write` 权限。全部走 REST API，因此不依赖本机安装 `gh`。
 
-附件是流式上传的，600 MB 的包不会读进内存。已存在且大小一致的附件会被跳过，
+附件是流式上传的，600 MB 的包不会读进内存。已存在且 SHA-256 一致的附件会被跳过，
 所以"上传中断就重跑一次"就是续传方式。
 """
 from __future__ import annotations
 
 import argparse
 import json
+import hashlib
 import os
 import sys
 import urllib.error
 import urllib.parse
 import urllib.request
 from pathlib import Path
+if not __package__:
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from scripts.build_support import skill_root, python_command
 
 API = "https://api.github.com"
+
+def sha256_file(path):
+    digest = hashlib.sha256()
+    with open(path, 'rb') as source:
+        for block in iter(lambda: source.read(4 << 20), b''):
+            digest.update(block)
+    return digest.hexdigest()
 
 
 def init_stdout() -> None:
@@ -106,7 +117,7 @@ def upload(github: GitHub, release: dict, path: Path, dry: bool) -> str:
     existing = {a["name"]: a for a in release.get("assets", [])}
     size = path.stat().st_size
     have = existing.get(path.name)
-    if have and have.get("size") == size:
+    if have and have.get("size") == size and have.get('digest') == 'sha256:' + sha256_file(path):
         print(f"  {path.name}：已上传过（{human(size)}）")
         return "skipped"
     if have:
@@ -136,8 +147,7 @@ def upload(github: GitHub, release: dict, path: Path, dry: bool) -> str:
 
 def main() -> int:
     init_stdout()
-    here = Path(__file__).resolve().parent
-    repo = here.parent
+    repo = skill_root()
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--manifest", default=str(repo / "assets.manifest.json"), help="清单路径")
     ap.add_argument("--dist", default=str(repo / "dist"), help="zip 所在目录")
@@ -169,6 +179,9 @@ def main() -> int:
         if path.stat().st_size != entry["bytes"]:
             print(f"  ! {path.name} 实际 {path.stat().st_size} 字节，清单记录 {entry['bytes']} 字节"
                   f"——请重新打包，让清单与要上传的文件一致", file=sys.stderr)
+            return 2
+        if sha256_file(path) != entry['sha256']:
+            print(f"  ! {path.name} SHA-256 与清单不一致，请重新打包", file=sys.stderr)
             return 2
         uploads.append((pack, path))
 
