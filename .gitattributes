@@ -5,6 +5,7 @@
 * text=auto
 
 *.py   text eol=crlf
+*.html text eol=crlf
 *.md   text eol=crlf
 *.json text eol=crlf
 *.yaml text eol=crlf
@@ -12,8 +13,7 @@
 *.txt  text eol=crlf
 *.cfg  text eol=crlf
 
-# 作者原始文件里这两个是 LF，单独声明以免被统一成 CRLF。
-single/scripts/check_audio_intervals.py text eol=lf
+# 保留既有示例的 LF 换行。
 season/examples/2020.md                text eol=lf
 
 # Release 压缩包与安装进来的素材不进版本库；同时声明为二进制，避免 git 尝试文本 diff。
