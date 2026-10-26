@@ -13,7 +13,7 @@ Black preview is available on demand and is never required before rendering.
 | | |
 |---|---|
 | resolution / fps | 1920x1080 / 120 |
-| structure | intro 5 s + main 46 s + pull-back 2 s + adaptive panorama hold; reserved end card **0 s** (total = 53 s + actual hold) |
+| structure | intro 3.3 s + main 46 s + pull-back 2 s + adaptive panorama hold; reserved end card **0 s** (total = 51.3 s + actual hold) |
 | video | H.264 CRF 16, yuv420p, +faststart |
 | audio | AAC 192k, **sound effects only - no BGM** |
 | poster | single frame at `last_peak + 0.6 h` |
@@ -230,16 +230,27 @@ track animation (spec rule 9) - nothing is allowed to simply appear.
 
 ## Intro card
 
-Black, logo centred, three lines fading in at 0.9 s / 1.8 s / 2.6 s:
+Track exports replace the title intro with a static editing lead-in of the same
+duration. The map, cloud frame and complete HUD are ready at frame zero; there
+is no HUD entrance easing. Hold the movement-start camera and source hour zero
+until INTRO. The cyclone icon/glow/label fade in from INTRO-0.5 to INTRO, with
+icon rotation held at its initial frame. Movement and rotation begin at INTRO.
+Full exports crossfade the title onto this same lead-in scene, so both modes
+share identical path, effect and audio times and the same total duration.
+
+Black background, centred logo; title and name line fade in together at 0.9–1.7 s.
+Intro duration is 3.3 s, including a map crossfade at 2.6–3.3 s.
 
 | line | y | content |
 |---|---|---|
-| title | 690 | `storm.intro_title` (fallback `storm.title`), verbatim, Saira Bold 60, tracked. Recommended authored copy: `CYCLONE <NAME>` / `hypoTC <NAME>`. If neither field exists, use `CYCLONE` / `hypoTC` according to hypothetical status. |
-| name | 762 | `storm.intro_line`, verbatim (empty when absent), mixed fonts, 25 px. Recommended copy: `<热带气旋 / 假想热带气旋><中文名> - <year> - WESTERN NORTH PACIFIC`. |
-| footer | 828 | `intro_footer`, mixed fonts, 15 px |
+| title | 690 | `storm.intro_title` (fallback `storm.title`), verbatim, Saira Bold 60, tracked |
+| name | 780 | `<Chinese category> <Chinese name>  <year>-<basin>`, mixed CJK/Latin fonts, 25 px |
 
-Every one of the three goes through the mixed CJK/Latin helper - a Chinese
-character in a Latin-only line renders as a tofu box.
+No footer is drawn. Chinese name comes from `storm.name_cn`, falling back to the
+name after the category in an existing `intro_line`. Explicit empty `intro_line`
+hides the second line. Year is the source track's start year; basin is determined
+at the maximum TC wind (maximum source wind if no TC): WPAC, CPAC, EPAC, NATL,
+NIO, SIO, AUS or SPAC. Existing English title/hypothetical copy is preserved.
 
 ## Cards that grow with the data
 
@@ -357,3 +368,7 @@ Official download URLs and SHA-256 hashes are recorded in `source.json`.
 Font paths are anchored to the skill, independent of project asset overrides.
 
 For all 200–500 kt body/halo nodes, use [extreme intensity rules](../../references/extreme-intensity.md). Cap both landfall size multipliers at 200 kt while retaining actual wind for colour and statistics.
+
+Single intro title and name fade in together from 0.9 to 1.7 s. Map crossfade remains the final 0.7 s (2.6–3.3 s).
+
+Chinese intro categories are derived from the effective current source track: any TC phase selects the TC-only lifetime maximum; below 34 kt uses 热带低压, below 64 kt uses 热带风暴. At 64 kt use 台风 in northern 100–180E, 旋风 in the Southern Hemisphere or northern 30–100E, otherwise 飓风. Strictly above 112/154/169 kt prepend 超强/顶级超强/超顶级超强. Without TC use 副热带气旋 (ST/SD/SS), then 温带气旋 (EX), otherwise 扰动. Second line uses the standard category/name/year/basin format; existing intro_line can supply a fallback Chinese name.

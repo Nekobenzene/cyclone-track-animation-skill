@@ -2,7 +2,7 @@
 """Standalone native-resolution static track previews for single storms and seasons.
 
 python scripts/track_preview.py single <project> [--black | --plain]
-python scripts/track_preview.py season <project> [--product overview|storms|all]
+python scripts/track_preview.py season <project> [--select season|all|01W 202012 ...]
 python scripts/track_preview.py html <season-project>
 
 Defaults: native EARTH density, continuous ACE heat (sigma 3 degrees, radius 15,
@@ -179,26 +179,40 @@ _SHORT = re.compile(r'^(?:\d{14}|\d{12})$')
 _LONG = re.compile(r'^\d{4}-\d{2}-\d{2}-\d{2}-\d{2}-\d{2}$')
 
 
-def read_num(src):
-    """(invest, depression, naming_stamp or None)
+def num_rows(src):
+    path = os.path.join(src, 'Num.txt')
+    if not os.path.isfile(path):
+        return ['', '', '', '']
+    with open(path, encoding='utf-8-sig') as fh:
+        rows = [line.strip() for line in fh]
+    return (rows + ['', '', '', ''])[:4]
 
-    The JMA column that used to sit third is gone, so the stamp is the only
-    14-digit (or legacy 12-digit) timestamp in the file.  Locating it by shape means this keeps working
-    for a 3-line file and for the older 4-line one.
-    """
-    p = os.path.join(src, 'Num.txt')
-    if not os.path.isfile(p):
-        return '', '', None
-    vals = [l.strip() for l in open(p, encoding='utf-8')]
-    vals = [v for v in vals if v]
-    stamp = None
-    for v in vals:
-        if _SHORT.match(v) or _LONG.match(v):
-            stamp = v
-    codes = [v for v in vals if v != stamp]
-    return (codes[0] if len(codes) > 0 else '',
-            codes[1] if len(codes) > 1 else '',
-            stamp)
+
+def read_num(src):
+    """Read invest, JTWC number and naming time from fixed rows 1-3."""
+    rows = num_rows(src)
+    return rows[0], rows[1], rows[2].split('#', 1)[0].strip() or None
+
+
+def select_storms(storms, tokens):
+    """Match only Num.txt row 2 (JTWC) or row 4 (JMA), never folder names."""
+    if not tokens or tokens == ['all']:
+        return 'all', None
+    if tokens == ['season']:
+        return 'overview', None
+    if any(token.lower() in ('all', 'season') for token in tokens):
+        raise ValueError('season/all must be used alone')
+    selected = []
+    for token in tokens:
+        code = token.upper()
+        if not (re.fullmatch(r'\d{2}[A-Z]', code) or re.fullmatch(r'\d{6}', code)):
+            raise ValueError('Expected JTWC number (01W / 15E) or six-digit JMA number: ' + token)
+        hits = [st for st in storms if code == st['dep'].upper() or code in st.get('jma', '').split()]
+        if len(hits) != 1:
+            raise ValueError('%s: %s' % (token, 'no Num.txt match' if not hits else 'ambiguous Num.txt matches: ' + ', '.join(st['dir'] for st in hits)))
+        if not any(st['dir'] == hits[0]['dir'] for st in selected):
+            selected.append(hits[0])
+    return 'selected', selected
 
 
 # ---------------------------------------------------------------------------
@@ -244,7 +258,7 @@ def load_storm(ps, season, assets, cache, folder):
         named = None
     en = folder.split('_', 1)[1] if '_' in folder else folder
     return dict(dir=folder, en=en.upper(), inv=inv, dep=dep, named=named,
-                S=S, renderer=ps, ctx={k: ps.__dict__.get(k) for k in PS_CTX}, log=buf.getvalue())
+                jma=num_rows(os.path.join(src, folder))[3], S=S, renderer=ps, ctx={k: ps.__dict__.get(k) for k in PS_CTX}, log=buf.getvalue())
 
 
 # module globals that `_build()` writes and the trail reader needs
@@ -671,7 +685,7 @@ def save_preview(frame,path,background):
 
 
 def render_heat_overviews(ps, storms, mapsrc, W, H, win, out, assets, settings,
-                          products='all', only=None, labels=False, lw=.7):
+                          products='all', only=None, labels=False, lw=.7, selected=None):
     background=settings.get('background','map')
     layers=settings.get('layers','both')
     show_heat=layers in ('both','heat')
@@ -696,6 +710,12 @@ def render_heat_overviews(ps, storms, mapsrc, W, H, win, out, assets, settings,
     if products in ('all','overview'):
         path=os.path.join(out,'overview.png')
         finish(path,field,report,storms,win)
+    if products == 'selected':
+        local_win=window_for(ps,mapsrc.basin,[full_track(st) for st in selected],W,H)
+        local_field,info=(pixel_ace_field(selected,local_win,**settings['field']) if show_heat else (None,{}))
+        codes=[st['dep'] or st.get('jma','').split()[0] for st in selected]
+        path=os.path.join(out,'selected_'+'_'.join(codes)+'.png')
+        finish(path,local_field,dict(info,selected=[st['dir'] for st in selected]),selected,local_win)
     del field
     if products in ('all','storms'):
         for st in storms:
@@ -747,13 +767,11 @@ def render_ace_html(ps, storms, mapsrc, win, out, assets, season_name,background
 # cli
 # ---------------------------------------------------------------------------
 def out_name(st):
-    """01W.png .. 26W.png, from the JTWC number"""
-    n = st['dep'] or ''
-    m = re.match(r'^(\d{2})W$', n)
-    if m:
-        return '%sW.png' % m.group(1)
-    m = re.match(r'^(\d{2})', st['dir'][2:])
-    return '%sW.png' % (m.group(1) if m else st['dir'])
+    """Prefer official Num.txt numbers; fall back to unique source folder."""
+    if re.fullmatch(r'\d{2}[A-Z]', st.get('dep', '')):
+        return st['dep'] + '.png'
+    jma = st.get('jma', '').split()
+    return (jma[0] if jma else st['dir']) + '.png'
 
 
 def find_defaults():
@@ -794,6 +812,7 @@ def render_season(argv):
     ap.add_argument('--heat-max', type=float, default=0.0, help='legend maximum; 0 uses actual peak')
     ap.add_argument('--heat-opacity', type=float, default=.4,
                     help='ACE heat opacity from 0 to 1 (default .4)')
+    ap.add_argument('--select', nargs='+', help='season | all | JTWC/JMA numbers separated by spaces')
     ap.add_argument('--only', default=None, help='comma list of NN, e.g. 22')
     a = ap.parse_args(argv)
     if not (0 <= a.heat_sigma <= 10 and 0 < a.heat_radius <= 30 and 0 < a.heat_step <= 360 and a.heat_max >= 0):
@@ -827,6 +846,10 @@ def render_season(argv):
     if not storms:
         raise SystemExit('no storm could be loaded')
     order = sorted(storms, key=lambda s: s['S'].t0)
+    try:
+        product, selected = select_storms(storms, a.select) if a.select else (a.cmd, None)
+    except ValueError as error:
+        ap.error(str(error))
     log('%d storms, %d fixes, %s .. %s'
         % (len(order), sum(len(s['S'].hours) for s in order),
            order[0]['S'].t0.strftime('%Y-%m-%d'),
@@ -886,8 +909,8 @@ def render_season(argv):
         only={x.strip().zfill(2) for x in a.only.split(',')} if a.only else None
         try:
             render_heat_overviews(ps,order,mapsrc,W,H,win,out,assets,settings,
-                                  products='all' if a.cmd=='ace-density' else a.cmd,
-                                  only=only,labels=a.labels,lw=a.line)
+                                  products='all' if product=='ace-density' else product,
+                                  only=only,labels=a.labels,lw=a.line,selected=selected)
         finally: mapsrc.im.close()
         return
 

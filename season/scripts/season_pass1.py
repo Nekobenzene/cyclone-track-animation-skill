@@ -1572,24 +1572,14 @@ def _build():
     CLOUD_HB = float(_CL.get('resume_h', 0.0))
     CLOUD_HEND = CLOUD_HB + (CLOUD_G1 - CLOUD_G0) * CLOUD_STEP
     # ---- Num.txt / hypo.txt (optional, sit beside the track files) ----
-    # Num.txt is now THREE lines - invest, JTWC number, JMA naming time.  The
-    # JMA number that used to sit third was only ever a placeholder and has been
-    # dropped, so the naming stamp is located by its SHAPE rather than by its
-    # line number.  The older four-line files (Wayne's is one) keep loading
-    # unchanged, because there the stamp is not first either.
+    # Fixed rows: invest, JTWC number, naming time; fourth row reserved.
     _num = os.path.join(SRC, 'Num.txt')
     if os.path.isfile(_num):
-        vals = [l.rstrip('\n').strip() for l in open(_num, encoding='utf-8')]
-        while vals and vals[-1] == '':
-            vals.pop()
-        stamp, rest = '', []
-        for v in vals:
-            if not stamp and (FIX_FMT_SHORT.match(v) or FIX_FMT_LONG.match(v)):
-                stamp = v
-            else:
-                rest.append(v)
-        rest += [''] * (4 - len(rest))
-        S.ids = dict(db=rest[0], dep=rest[1], jma=rest[2], named=stamp)
+        with open(_num, encoding='utf-8-sig') as fh:
+            vals = [line.strip() for line in fh]
+        vals += [''] * max(0, 4 - len(vals))
+        stamp = vals[2].split('#', 1)[0].strip()
+        S.ids = dict(db=vals[0], dep=vals[1], jma='', named=stamp)
         if stamp:
             try:
                 S.named_t = parse_fix_time(stamp)

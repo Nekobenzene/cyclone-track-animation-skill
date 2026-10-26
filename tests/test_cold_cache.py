@@ -21,7 +21,7 @@ RENDERERS = ('single/scripts/typhoon_anim.py', 'season/scripts/season_pass1.py')
 def load_cache_functions(relative):
     path = ROOT / relative
     tree = ast.parse(path.read_text(encoding='utf-8'))
-    names = {'_c', '_apply_config', '_bind_paths', '_ensure_cache_dirs', 'extract_fx'}
+    names = {'_c', '_apply_config', '_bind_paths', '_ensure_cache_dirs', 'extract_fx', 'video_mode'}
     nodes = [node for node in tree.body
              if isinstance(node, ast.FunctionDef) and node.name in names]
     # Load the actual renderer constructor too; stop after asset preparation.

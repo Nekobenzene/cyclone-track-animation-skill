@@ -116,10 +116,13 @@ def _bind_paths():
     ICOND = os.path.join(CACHE, 'icons')
     CLOUDD = os.path.join(BUILD, 'cloud')          # a storm's own cloud frames
     FXD = os.path.join(CACHE, 'fx')
-    OUTMP4 = os.path.join(OUTDIR, _c('output.mp4', 'typhoon_track_animation.mp4'))
+    mode = video_mode()
+    movie = _c('output.mp4', 'typhoon_track_animation.mp4')
+    stem, ext = os.path.splitext(movie)
+    OUTMP4 = os.path.join(OUTDIR, stem + '_' + mode + (ext or '.mp4'))
     POSTER = os.path.join(OUTDIR, _c('output.poster', 'typhoon_poster.png'))
-    RAWM = os.path.join(BUILD, 'video_silent.mp4')
-    WAV = os.path.join(BUILD, 'audio.wav')
+    RAWM = os.path.join(BUILD, 'video_%s_silent.mp4' % mode)
+    WAV = os.path.join(BUILD, 'audio_%s.wav' % mode)
     os.makedirs(OUTDIR, exist_ok=True)
     os.makedirs(BUILD, exist_ok=True)
     _ensure_cache_dirs()
@@ -174,7 +177,7 @@ OUTPUT_W, OUTPUT_H = 1920, 1080
 SPAN0_LON = 22.8                            # tracking view
 SPAN1_LON = 52.0                            # pulled-back panorama
 PANO_C = (130.9, 25.6)                      # panorama centre (lon, lat)
-INTRO, MAIN = 5.0, 46.0
+INTRO, MAIN = 3.3, 46.0
 # Reserved end-card slot: zero duration until a new design is implemented.
 PULL, HOLD, SUMMARY = 2.0, 2.0, 0.0
 T_MAIN = INTRO + MAIN
@@ -1470,8 +1473,6 @@ LABEL_FADE_S = 0.6         # ...then fades over this
 MARKER_SCALE = 0.30        # rule 3: Landed marker at 30 % of its old size
 CARD_FADE = 0.55          # rule 3: a column slides + fades out over this long
 CARD_CYCLE = 4.0           # rule 7: a card column shows for this long
-HUD_IN_DUR = 0.55          # item 6: how long a panel takes to fly in
-HUD_IN_SLIDE = 70          # ...and how far it travels, in pixels
 CARD_W = 440               # end-card width
 CARD_X_L = 40              # left (peak) column
 CARD_M = 40                # right (landfall) column margin
@@ -2348,19 +2349,6 @@ class R:
         cmd_assets()
         self._pano = None
         self.hud = build_hud()
-        # item 6: the four corner panels and the timeline each get their own
-        # entrance.  Cropping the finished HUD is enough - no need to rebuild the
-        # drawing code panel by panel.
-        self.hud_parts = []
-        rest = self.hud.copy()
-        HUD_IN = [(P_TL, 'L', 0.10), (P_ACE, 'R', 0.28), (P_GR, 'L', 0.46),
-                  (P_LG, 'L', 0.62), (P_TL2, 'D', 0.78)]
-        for box, side, delay in HUD_IN:
-            x, y, w, h = box
-            self.hud_parts.append((box, self.hud.crop((x, y, x + w, y + h)),
-                                   side, delay))
-            rest.paste((0, 0, 0, 0), (x, y, x + w, y + h))
-        self.hud_rest = rest
         self.f_hero = font(F_MONOB, 50)
         self.f_val  = font(F_MONOB, 38)
         self.f_badge = font(F_UIB, 24)
@@ -2885,27 +2873,8 @@ class R:
         return Image.blend(spr(la), spr(lb), t)
 
     def _compose_hud(self, t):
-        hudlay = Image.new('RGBA', (W, H), (0, 0, 0, 0))
-        hudlay.paste(self.hud_rest, (0, 0), self.hud_rest)
-        # item 6: panels fly in, staggered, instead of all appearing at once
-        for box, lay, side, delay in self.hud_parts:
-            u = _ramp(t, INTRO + delay, INTRO + delay + HUD_IN_DUR)
-            if u <= 0.001:
-                continue
-            a = lay
-            if u < 0.999:
-                a = lay.copy()
-                a.putalpha(a.getchannel('A').point(lambda v: int(v * u)))
-            off = int((1.0 - u) * HUD_IN_SLIDE)
-            if side == 'L':
-                xy = (box[0] - off, box[1])
-            elif side == 'R':
-                xy = (box[0] + off, box[1])
-            else:
-                xy = (box[0], box[1] + off)
-            hudlay.alpha_composite(a, xy)
-
-        return hudlay
+        """All HUD panels are present at their final positions from frame zero."""
+        return self.hud.copy()
 
     def frame_main(self, t, i):
         h = hours_of_t(t)
@@ -2913,21 +2882,18 @@ class R:
         sw = state_weights(h, wind)
         lvl = dominant(sw)
         col = state_color(h, wind, sw)
-        cam_lon, cam_lat, span = self.cam[i]
+        # Hold exactly the movement-start camera; smoothing must not leak motion
+        # into the editing lead-in. Cloud and icon animation are held too.
+        display_i = int(round(INTRO * FPS)) if t < INTRO else i
+        cam_lon, cam_lat, span = self.cam[display_i]
         img, proj = cam_frame(cam_lon, cam_lat, span)
         frame = Image.fromarray(img)
 
         # ---- HUD is built into its own layer so it can exit as a whole -----
-        hud_ready = t >= INTRO + 0.78 + HUD_IN_DUR
-        if hud_ready and getattr(self, '_hud_ready', None) is not None:
-            hudlay = self._hud_ready.copy()
-        else:
-            hudlay = self._compose_hud(t)
-            if hud_ready:
-                self._hud_ready = hudlay.copy()
+        hudlay = self._compose_hud(t)
 
         # cloud inset (screen blended, feathered -> no visible square, no caption)
-        ca = self.cloud_alpha[i]
+        ca = self.cloud_alpha[display_i]
         if t > T_MAIN:
             ca *= max(0.0, 1.0 - _ramp(t, T_MAIN, T_MAIN + PULL * 0.8))
         if ca > 0.01:
@@ -2940,7 +2906,7 @@ class R:
 
         cx, cy = proj(lon, lat)
         # ---- item 3: storm icon + glow fade out while pulling back ---------
-        sfade = 1.0
+        sfade = _ramp(t, INTRO - 0.5, INTRO)
         if t > T_MAIN:
             sfade = max(0.0, 1.0 - _ramp(t, T_MAIN, T_MAIN + PULL * 0.7))
         halo = col
@@ -2948,13 +2914,14 @@ class R:
             halo = tuple(min(255, int(v * 1.25 + 70)) for v in col)
         ov = Image.new('RGBA', (W, H), (0, 0, 0, 0))
         if sfade > 0.02:
-            self.glow(ov, cx, cy, wind, halo, math.sin(t * 1.6), sfade)
-        self.trail(ov, h, proj)
+            self.glow(ov, cx, cy, wind, halo, math.sin(max(t, INTRO) * 1.6), sfade)
+        if t >= INTRO:
+            self.trail(ov, h, proj)
         frame.paste(ov, (0, 0), ov)
 
         # storm icon (cross-faded between levels)
         if sfade > 0.02:
-            nf = int((t - INTRO) * ICON_FPS)
+            nf = max(0, int((t - INTRO) * ICON_FPS))
             # ONE definition of the phase.  sample() returns a STEP at the fix
             # times, while the blend window is measured from the PHASE_BOUNDS
             # midpoint - using the step here let the icon fall back to the old
@@ -2979,9 +2946,9 @@ class R:
             # rule 17: name the system beside its icon - invest, TD number, or
             # the storm's own name once it has one
             lbl, lcol = self.icon_label(h, ph)
-            if lbl and sfade > 0.5:
+            if lbl and sfade > 0.02:
                 d17 = ImageDraw.Draw(frame, 'RGBA')
-                a17 = int(235 * sfade * _ramp(t, INTRO + 0.4, INTRO + 1.4))
+                a17 = int(235 * sfade)
                 if a17 > 0:
                     f17 = font(F_MONOB, 40)
                     # tucked against the icon's upper-right shoulder
@@ -3126,23 +3093,16 @@ class R:
             s = intro_title()
             wd = tracked_w(d, s, f1, 6.0)
             tracked(d, ((W - wd) / 2, 690), s, f1, tuple(int(255 * a) for _ in range(3)), 6.0)
-        a2 = _ramp(t, 1.8, 2.6)
+        a2 = a
         if a2 > 0:
             t2 = intro_name_line()
-            mixed(d, (W / 2 - mixed_w(d, t2, font(F_MONO, 25), font(F_CJK, 25)) / 2.0, 762),
+            mixed(d, (W / 2 - mixed_w(d, t2, font(F_MONO, 25), font(F_CJK, 25)) / 2.0, 780),
                   t2, font(F_MONO, 25), font(F_CJK, 25),
                   tuple(int(215 * a2) for _ in range(3)))
-        a3 = _ramp(t, 2.6, 3.4)
-        if a3 > 0:
-            t3 = _S.get('intro_footer', '')
-            mixed(d, (W / 2 - mixed_w(d, t3, font(F_MONO, 15), font(F_CJK, 15)) / 2.0, 828),
-                  t3, font(F_MONO, 15), font(F_CJK, 15),
-                  tuple(int(190 * a3) for _ in range(3)))
         f = _ramp(t, INTRO - 0.7, INTRO)
         if f > 0:
-            c0 = self.cam[int(INTRO * FPS)]
-            img, _ = cam_frame(c0[0], c0[1], c0[2])
-            frame = Image.blend(frame, Image.fromarray(img), f)
+            opening = self.frame_main(t, int(round(t * FPS)))
+            frame = Image.blend(frame, opening, f)
         return frame
 
     # -- pulled-back "poster" frame (used by HOLD and as the summary backdrop)
@@ -3460,7 +3420,8 @@ class R:
 
     def render(self, i):
         t = i / FPS
-        if t < INTRO: return self.frame_intro(t)
+        if t < INTRO:
+            return self.frame_main(t, i) if video_mode() == 'track' else self.frame_intro(t)
         if t < T_MAIN: return self.frame_main(t, i)
         if t < T_PULL: return self.frame_main(t, i)
         if t < T_SUM: return self.frame_hold(t)
@@ -3526,9 +3487,59 @@ def intro_title():
         return _S['title']
     return 'hypoTC' if _S.get('hypothetical') else 'CYCLONE'
 
+def chinese_cyclone_prefix(series):
+    """Classify the effective source track; EX winds never inflate TC strength."""
+    tc = [i for i, phase in enumerate(series.phase) if phase == 'TC']
+    if not tc:
+        if any(p in ('ST', 'SD', 'SS') for p in series.phase):
+            return '副热带气旋'
+        if 'EX' in series.phase:
+            return '温带气旋'
+        return '扰动'
+    peak = max(tc, key=lambda i: float(series.wind[i]))
+    wind = float(series.wind[peak])
+    if wind < 34:
+        return '热带低压'
+    if wind < 64:
+        return '热带风暴'
+    lon, lat = float(series.lon[peak]) % 360, float(series.lat[peak])
+    if lat < 0 or 30 <= lon < 100:
+        kind = '旋风'
+    elif 100 <= lon < 180:
+        kind = '台风'
+    else:
+        kind = '飓风'
+    qualifier = ('超顶级超强' if wind > 169 else '顶级超强' if wind > 154
+                 else '超强' if wind > 112 else '')
+    return qualifier + kind
+
+
 def intro_name_line():
-    """The authored name line already includes any desired phase or qualifier."""
-    return _S.get('intro_line', '')
+    """Chinese category, name and source year/basin in one standard line."""
+    text = _S.get('intro_line', '')
+    series = globals().get('S')
+    if series is None or ('intro_line' in _S and not text):
+        return text
+    prefix = chinese_cyclone_prefix(series)
+    pattern = r'^(假想)?(?:(?:超顶级超强|顶级超强|超强|强)?(?:台风|飓风|旋风)|副热带气旋|副热带风暴|副热带低压|温带气旋|热带气旋|热带低压|热带风暴|热带扰动|扰动)'
+    match = re.match(pattern, text)
+    name = _S.get('name_cn', '')
+    if not name and match:
+        found = re.match(r'\s*([\u3400-\u9fff]+)', text[match.end():])
+        name = found.group(1) if found else ''
+    if not name:
+        return text
+    tc = [i for i, phase in enumerate(series.phase) if phase == 'TC']
+    candidates = tc or list(range(len(series.phase)))
+    peak = max(candidates, key=lambda i: float(series.wind[i]))
+    lon, lat = float(series.lon[peak]) % 360, float(series.lat[peak])
+    if lat < 0:
+        basin = 'SIO' if lon < 90 else 'AUS' if lon < 160 else 'SPAC'
+    else:
+        basin = ('NIO' if 30 <= lon < 100 else 'WPAC' if 100 <= lon < 180
+                 else 'CPAC' if 180 <= lon < 220 else 'EPAC' if 220 <= lon < 260
+                 else 'NATL')
+    return '%s %s  %d-%s' % (prefix, name, series.t0.year, basin)
 
 def lifetime_label():
     """the end card states the tropical-cyclone stage only: the disturbance,
@@ -3694,9 +3705,33 @@ def intensity_intervals(threshold):
     return runs
 
 
+def video_mode():
+    """CLI overrides output.video_mode; existing projects default to track only."""
+    mode = _c('output.video_mode', 'track')
+    if mode not in ('intro', 'track', 'full'):
+        raise ValueError('output.video_mode must be intro, track or full')
+    return mode
+
+
+def video_window():
+    """Track and full share the same editing timeline, including the lead-in."""
+    mode = video_mode()
+    if mode == 'intro':
+        return 0.0, INTRO
+    return 0.0, TOTAL
+
+
 def build_audio():
     os.makedirs(TMP, exist_ok=True)          # sfx() stages converted clips here
     sr = 44100
+    export_start, export_end = video_window()
+    if video_mode() == 'intro':
+        # The opening has no effect sound and needs no track audio assets.
+        with wave.open(WAV, 'wb') as w:
+            w.setnchannels(2); w.setsampwidth(2); w.setframerate(sr)
+            w.writeframes(b'\0' * (int(round((export_end - export_start) * sr)) * 4))
+        print('audio ->', WAV, '(silent intro)')
+        return
     n = int(TOTAL * sr)
     mix = np.zeros((n, 2), dtype=np.float32)
     def add(t0, a, gain=1.0, fade=0.15):
@@ -3772,6 +3807,7 @@ def build_audio():
     over = a > 0.82
     mix[over] = np.sign(mix[over]) * (0.82 + 0.1 * np.tanh((a[over] - 0.82) / 0.1))
     mix *= 0.88
+    mix = mix[int(round(export_start * sr)):int(round(export_end * sr))]
     pk = float(np.max(np.abs(mix)))
     with wave.open(WAV, 'wb') as w:
         w.setnchannels(2); w.setsampwidth(2); w.setframerate(sr)
@@ -3849,13 +3885,15 @@ def cmd_render():
     output_fps = int(_c('output.fps', FPS))
     if not 1 <= output_fps <= FPS:
         raise ValueError('Output fps must be an integer from 1 to %d' % FPS)
-    output_frames = int(round(TOTAL * output_fps))
+    start, end = video_window()
+    output_frames = int(round((end - start) * output_fps))
     if output_w <= 0 or output_h <= 0 or output_w % 2 or output_h % 2:
         raise ValueError('Output width and height must be positive even integers')
     scale_args = (['-vf', 'scale=%d:%d:flags=lanczos' % (output_w, output_h)]
                   if (output_w, output_h) != (W, H) else [])
     # Always finish the reviewable still before any video process starts.
-    cmd_preview()
+    if video_mode() != 'intro':
+        cmd_preview()
     if cv2 is None:
         raise SystemExit("Video rendering requires opencv-python; preview.png is ready.")
     r = R()
@@ -3868,14 +3906,15 @@ def cmd_render():
     import time as _t
     t0 = _t.time()
     for i in range(output_frames):
-        source_frame = min(NFRAMES - 1, int(round(i * FPS / float(output_fps))))
+        source_frame = min(NFRAMES - 1, int(round((start + i / float(output_fps)) * FPS)))
         p.stdin.write(r.render(source_frame).tobytes())
         if i % output_fps == 0:
             el = _t.time() - t0
             with open(os.path.join(BUILD, 'render_progress.json'), 'w', encoding='utf-8') as progress:
                 json.dump(dict(frames=i+1, total=output_frames, elapsed=el,
                                eta=el/max(1,i+1)*(output_frames-i-1), fps=output_fps,
-                               width=output_w, height=output_h), progress)
+                               width=output_w, height=output_h, video_mode=video_mode(),
+                               source_start=start, duration=end-start), progress)
             print('  %5d/%d  %6.1fs  eta %6.1fs' % (i, output_frames, el,
                   el / max(1, i + 1) * (output_frames - i - 1)), flush=True)
     p.stdin.close()
@@ -3893,6 +3932,7 @@ def main(argv):
     if '--help' in argv or '-h' in argv:
         print(__doc__)
         print('Static preview options: --background map|black|transparent --layers both|track|heat --size native|WxH --heat-parameters FILE')
+        print('Video options: --video-mode intro|track|full (default: track; YAML: output.video_mode)')
         return
     # storm names and region labels are CJK: never let a legacy console code
     # page (GBK, cp1252 ...) abort a render
@@ -3904,9 +3944,18 @@ def main(argv):
     cfg_path, cmd = 'typhoon.yaml', 'all'
     i, positional = 0, []
     preview_options={}
+    selected_mode = None
     while i < len(argv):
         a = argv[i]
         option=a.split('=',1)[0]
+        if option == '--video-mode':
+            if '=' in a: selected_mode=a.split('=',1)[1]; i+=1
+            else:
+                if i + 1 >= len(argv): raise SystemExit('--video-mode requires intro, track or full')
+                selected_mode=argv[i+1]; i+=2
+            if selected_mode not in ('intro', 'track', 'full'):
+                raise SystemExit('--video-mode requires intro, track or full')
+            continue
         if option in ('--background','--layers','--size','--heat-parameters'):
             if '=' in a:value=a.split('=',1)[1];i+=1
             else:value=argv[i+1];i+=2
@@ -3919,7 +3968,11 @@ def main(argv):
         positional.append(a); i += 1
     if positional:
         cmd = positional[0]
+    if selected_mode is not None and cmd not in ('all', 'render', 'audio', 'mux', 'info'):
+        raise SystemExit('--video-mode applies to all/render/audio/mux/info')
     _apply_config(_load_config(cfg_path))
+    if selected_mode is not None:
+        CFG.setdefault('output', {})['video_mode'] = selected_mode
     _bind_paths()
     _cfg_span()
     _build()
@@ -3944,6 +3997,9 @@ def main(argv):
     elif cmd == 'mux':
         cmd_mux()
     elif cmd == 'info':
+        start, end = video_window()
+        print('  video mode %s / %.2f s / source %.2f..%.2f s -> %s'
+              % (video_mode(), end-start, start, end, OUTMP4))
         pk = _D.get('peaks') or []
         for k, p in enumerate(pk):
             print('  peak%d  h=%6.1f  %d kt / %d hPa' %

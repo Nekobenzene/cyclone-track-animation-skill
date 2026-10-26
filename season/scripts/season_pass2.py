@@ -294,7 +294,7 @@ def sys_reach(S, t0, named):
     counted in MH, and in HU, TS and TD below it.
 
     TD is taken as the FIRST FIX. The source carries no numbering timestamp -
-    `Num.txt` holds an invest id, the xxW number and the JMA name, nothing else -
+    `Num.txt` rows hold an invest id, the xxW number, naming time and a reserved JMA number -
     and every folder in the season has a number, so a system is numbered for its
     whole tracked life. If a season ever carries an unnumbered system, this is the
     line that has to learn about it.
@@ -551,27 +551,28 @@ def read_rows(path):
     return out
 
 
-def read_stamp(path):
-    """The JMA stamp, found by SHAPE, never by line number."""
+def read_num_rows(path):
+    """Fixed rows: invest, JTWC number, naming time; row four is reserved."""
     if not os.path.isfile(path):
-        return None
-    with open(path, encoding='utf-8', errors='replace') as fh:
-        for raw in fh:
-            for tok in re.split(r'[^0-9-]+', raw.strip()):
-                if TIME_COMPACT.match(tok) or TIME_LONG.match(tok):
-                    return parse_fix_time(tok)
-    return None
+        return ['', '', '', '']
+    with open(path, encoding='utf-8-sig') as fh:
+        rows = [line.strip() for line in fh]
+    return (rows + ['', '', '', ''])[:4]
+
+
+def read_stamp(path):
+    stamp = read_num_rows(path)[2].split('#', 1)[0].strip()
+    return parse_fix_time(stamp) if stamp else None
 
 
 def read_jtwc(path):
-    if not os.path.isfile(path):
+    number = read_num_rows(path)[1]
+    if not number:
         return None
-    with open(path, encoding='utf-8', errors='replace') as fh:
-        for raw in fh:
-            m = re.search(r'\b(\d{2})W\b', raw)
-            if m:
-                return int(m.group(1))
-    return None
+    m = re.fullmatch(r'(\d{2})[A-Z]', number)
+    if not m:
+        raise ValueError('%s:2: expected JTWC number (e.g. 01W / 15E) or an empty line' % path)
+    return int(m.group(1))
 
 
 def read_damage(path):

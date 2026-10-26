@@ -460,3 +460,7 @@ ACE 只包含 phase 为 `TC` 的 `data.series` 块在 skip_first/skip_last
 可选的地理数据打包在父 skill 的 `assets/geo/` 下，与项目工作区分离。正常渲染不需要它。
 
 Path inputs: see [unified and legacy track rules](../../references/track-data.md). A type file may have time gaps occupied by other type files; merge fixes by timestamp, never by whole-file time ranges.
+
+## Video export modes
+`output.video_mode` selects `intro`, `track` (default), or `full`. CLI `--video-mode` overrides it for all/render/audio/mux/info. Intro is [0, INTRO); track and full are both [0, TOTAL). Track retains the opening-length editing lead-in and ending panorama. It shows a static initial map and complete HUD throughout the lead-in, with no panel entrance animation. The icon and its label fade in during [INTRO-0.5, INTRO], then movement begins. Track/full audio and event times are identical, so replacing the lead-in with the intro requires no timeline shift. Output MP4 and intermediate silent video/WAV have mode suffixes. Split commands must use the same mode.
+

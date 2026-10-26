@@ -66,3 +66,25 @@ season 到 `output/overview/overview.png` 和各单旋 `NNW.png`；HTML 为
 工具日志和临时文件从一开始就放在项目 `build/` 中。
 
 编译入口为 `bin/typhoon/typhoon.exe preview single|season|html <项目>`，参数与源码一致。两项选择仅用于静态预览，不改变动画底片。
+
+## Season output selection
+
+Use `--select` with either `season`, `all`, or space-separated identifiers:
+
+```text
+python scripts/track_preview.py season <project> --select season
+python scripts/track_preview.py season <project> --select all
+python scripts/track_preview.py season <project> --select 01W 202012
+python season/scripts/season_overview.py --season <project> --select 01W 202012
+```
+
+`season` writes only `overview.png`. `all` writes the season overlay and every
+individual cyclone. Identifiers write one `selected_<identifiers>.png` containing
+all matched cyclones. Match JTWC identifiers against Num.txt row 2 and six-digit
+JMA identifiers against row 4 (multiple JMA identifiers on that row are supported).
+Folder names are never used for matching. Repeated matches are deduplicated;
+missing or ambiguous identifiers are errors. `season` and `all` must appear alone.
+Selected heat is calculated from only the matched cyclones, using the full-season
+shared scale; paths remain above heat. Background/layer/native-size options apply.
+The same `--select` option is available through compiled preview/season-overview
+entries after rebuilding the executable.

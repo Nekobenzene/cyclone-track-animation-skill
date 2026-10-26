@@ -216,7 +216,7 @@ data:
 
 ### 2.2 编号与属性：可选
 
-`Num.txt` 固定三行：扰动编号、热带低压编号、命名时间。缺失项保留空行。
+`Num.txt` 严格按行读取：第一行扰动编号，第二行 JTWC 编号（如 `01W`），第三行命名时间；第四行 JMA 编号暂时保留、不参与渲染。缺失项保留空行，不写 `-`，不向上补位。第三行可带 `#` 注释；只使用这一行的命名时间，不扫描其他行。
 
 ```text
 90W
@@ -332,6 +332,21 @@ single 中只有 aL/DB、WV、MD、RV 用虚线，SD、SS、TC、EX 用实线；
 配色见 [轨迹规则](references/track-data.md#single-track-appearance)。
 
 ### 第三步：渲染与交付
+
+single 默认只输出路径视频（路径动画、拉远及结尾全景），不含片头。
+`--video-mode intro|track|full` 分别选择仅片头、仅路径、完整视频；命令行优先于
+YAML `output.video_mode`，未配置时为 `track`。`intro` 为 3.3 秒片头（无效果音），
+`full` 包含片头和完整路径视频。路径模式从第一帧显示完整 HUD 和静止地图，保留与片头等长的静止段；气旋图标及名称在正式路径开始前 0.5 秒淡入，然后开始移动。HUD 不再缓动入场。路径版和完整版的总时长、正式路径起点与音效时间轴完全一致，因此剪辑时可直接用片头覆盖路径版静止段。
+
+```powershell
+& $Exe single $SingleProject all --video-mode intro
+& $Exe single $SingleProject all --video-mode track
+& $Exe single $SingleProject all --video-mode full
+```
+
+`info`、`render`、`audio`、`mux` 也接受此参数；分步制作应保持同一模式。
+成片文件名在 `output.mp4` 配置的文件名末尾加 `_intro`、`_track` 或 `_full`，
+中间视频与音频同样按模式命名，因此三种产物可并存。
 
 ```powershell
 & $Exe single $SingleProject all

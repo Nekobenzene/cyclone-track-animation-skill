@@ -125,7 +125,7 @@ its own test, on its own scale:
   reach hurricane force without ever being named. When that happens a LOWER ruler
   can be shorter than a higher one, and it is not a bug. 2020 has no such case.
 * **TD is taken as the first fix.** `Num.txt` carries no numbering timestamp — an
-  invest id, the `xxW` number and the JMA name, nothing else — and every folder in
+  invest id, the `xxW` number, naming time and a reserved JMA number — and every folder in
   a season has a number, so a system is numbered for its whole tracked life. This
   is the line to revisit if a season ever carries an unnumbered system.
 * **A count ramps in over `P2_EASE_S` = 1.5 SCREEN seconds** from the moment the

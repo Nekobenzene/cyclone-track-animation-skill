@@ -5,6 +5,27 @@ description: Render one cyclone with an SMCY1.3 follow camera, intensity-coloure
 
 # Single cyclone
 
+## Video export selection
+
+Default video output is **track only**, including the main track animation and
+ending panorama, with a static editing lead-in instead of the title opening. Use `--video-mode intro|track|full` with
+`all`, `render`, `audio`, `mux` or `info`; CLI overrides YAML `output.video_mode`.
+`intro` exports only the 3.3 s opening, `full` exports opening + track + panorama.
+Track and full share identical durations and audio timelines: track holds its
+initial map and complete HUD for INTRO seconds, so an intro can replace that
+lead-in without moving the track or sound. HUD has no entrance animation. The
+cyclone icon and label fade in during INTRO's last 0.5 s, then movement begins.
+The camera, cloud frame and icon rotation stay fixed during the lead-in. Full's
+intro crossfades onto this same prepared scene. Intro audio is silent. Use the same mode for split
+render/audio/mux steps. Final names add `_intro`, `_track` or `_full` before `.mp4`;
+intermediate video/audio names also include the mode, preventing cross-mode reuse.
+
+```text
+bin/typhoon/typhoon.exe single <project> all                     # track only
+bin/typhoon/typhoon.exe single <project> all --video-mode intro
+bin/typhoon/typhoon.exe single <project> all --video-mode full
+```
+
 Read the parent [SKILL](../SKILL.md) for shared resources and working-file rules.
 Minimum input is one valid path of any supported type; TC is optional. The executable
 and all source commands below are relative to the parent skill root.
@@ -46,9 +67,7 @@ camera and paths are independent of static preview styling.
 - [Extreme intensities](../references/extreme-intensity.md): palette to 500 kt,
   high-wind numeral/banner/card treatment and landfall size cap.
 
-Opening text is verbatim: `intro_title` overrides `title`; `intro_line` defaults
-to empty. Explicit empty strings hide text. Hypothetical flags never prepend words
-to configured text. Missing titles fall back to hypoTC/CYCLONE. Choose hemisphere
+Opening title is verbatim: `intro_title` overrides `title`; explicit empty strings hide it. The Chinese second line is generated as `<category> <name_cn>  <year>-<basin>`; existing `intro_line` supplies a fallback Chinese name, and explicit empty `intro_line` hides it. Title and second line fade in simultaneously at 0.9–1.7 s; intro lasts 3.3 s, with a 0.7 s map crossfade. No footer is drawn. Category uses TC-only peak wind when any TC exists; otherwise ST/SD/SS takes priority over EX, then disturbance. See the style specification for basin and strict 112/154/169 kt prefix thresholds. Missing titles fall back to hypoTC/CYCLONE. Choose hemisphere
 art from current latitude. TS/SS upgrade FX/audio trigger only when entering the
 respective level while strengthening, regardless of preceding type; SS FX are
 yellow-green. Sustained C4+/170 kt sounds stop during weaker intervals.

@@ -2,6 +2,13 @@
 from pathlib import Path
 import argparse, os, sys, subprocess, importlib
 
+def asset_reference(assets, build):
+    """Windows projects and the shared skill may be on different drives."""
+    try:
+        return Path(os.path.relpath(assets, build)).as_posix()
+    except ValueError:
+        return assets.as_posix()
+
 def main(argv=None, renderer_module=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('project', type=Path)
@@ -12,6 +19,8 @@ def main(argv=None, renderer_module=None):
     parser.add_argument('--layers',choices=['both','track','heat'])
     parser.add_argument('--size',help='Static preview size: native or WxH')
     parser.add_argument('--heat-parameters')
+    parser.add_argument('--video-mode', choices=['intro','track','full'],
+                        help='Export intro only, track only (default), or full video')
     args = parser.parse_args(argv)
     preview_flags=[]
     for key in ('background','layers','size','heat_parameters'):
@@ -19,6 +28,10 @@ def main(argv=None, renderer_module=None):
         if value is not None:preview_flags += ['--'+key.replace('_','-'),value]
     if preview_flags and args.command not in ('preview','preview-black'):
         parser.error('Background/layers/size/heat parameters apply to static preview commands')
+    if args.video_mode:
+        if args.command not in ('all','render','audio','mux','info'):
+            parser.error('--video-mode applies to all/render/audio/mux/info')
+        preview_flags += ['--video-mode', args.video_mode]
 
     shared = Path(os.environ.get('TYPHOON_SKILL_ROOT') or Path(__file__).resolve().parents[2])
     skill = shared/'single'
@@ -52,11 +65,12 @@ def main(argv=None, renderer_module=None):
         build = project/'build'
         build.mkdir(exist_ok=True)
         config = build/'storm.yaml'
-        cfg = {'paths': {'storm':'..', 'assets':Path(os.path.relpath(assets,build)).as_posix(),
+        cfg = {'paths': {'storm':'..', 'assets':asset_reference(assets,build),
                          'sourcedata':'sourcedata','build':'build','output':'output'},
                'storm':{'id':project.name,'title':project.name,'name_en':project.name},
                'view':{'panorama':'auto'},
                'output':{'width':1920,'height':1080,'fps':120,
+                         'video_mode':'track',
                          'mp4':project.name+'_1920x1080_120fps.mp4'}, 'data':{}}
         # A source-only project needs a real peak for banner category/tint.
         sys.path.insert(0, str(skill/'scripts'))

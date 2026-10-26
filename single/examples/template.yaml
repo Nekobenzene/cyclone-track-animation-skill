@@ -18,6 +18,7 @@ paths:
   tag:        storm1              # intermediates: icons_storm1 / fx_storm1
 
 output:
+  video_mode: track              # intro / track (default) / full; CLI --video-mode overrides
   mp4:    my_storm_animation.mp4
   poster: my_storm_poster.png
 
