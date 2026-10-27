@@ -54,9 +54,20 @@ jobs:
       - name: Fetch tool answers --list without downloading
         run: python tools/fetch_assets.py --list
 
+      - name: Install encoder tools for real video regressions
+        run: |
+          choco install ffmpeg --no-progress -y
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $encoder = Get-ChildItem "$env:ChocolateyInstall/lib/ffmpeg" -Recurse -Filter ffmpeg.exe | Select-Object -First 1
+          if (-not $encoder) { throw "FFmpeg installation not found" }
+          New-Item -ItemType Directory -Force runtime/bin | Out-Null
+          Copy-Item $encoder.FullName runtime/bin/ffmpeg.exe
+          Copy-Item (Join-Path $encoder.DirectoryName ffprobe.exe) runtime/bin/ffprobe.exe
+        shell: pwsh
+
       - name: Fresh-cache renderer regressions
         run: |
-          python -m pip install numpy pillow opencv-python-headless
+          python -m pip install numpy pillow opencv-python-headless pyyaml
           python -m unittest discover -s tests -v
 
       - name: No tracked build artefacts
