@@ -942,9 +942,12 @@ class Series:
             wh, wv, ph, pv = self.ihours, self.iwind, self.ihours, self.ipres
         self.wknots, self.pknots = (wh, wv), (ph, pv)
         self.WF = MonotoneCubic(wh, wv)
+        # Audio thresholds follow observed plateaus, not the eased display apex.
+        self.WF_audio = MonotoneCubic(self.ihours, self.iwind)
         self.PF = MonotoneCubic(ph, pv)
         if str(_D.get('intensity_curve', 'monotone')).lower() == 'linear':
             self.WF = lambda q: np.interp(q, wh, wv)
+            self.WF_audio = lambda q: np.interp(q, self.ihours, self.iwind)
             self.PF = lambda q: np.interp(q, ph, pv)
         if ease:
             print('  plateau easing: %d -> %d wind knots, %d -> %d pressure knots'
@@ -3841,10 +3844,11 @@ def intensity_intervals(threshold):
     The wind interpolator is monotone within each knot interval. Solve each
     crossing separately so even a short dip between two peaks remains silent.
     """
-    knots = getattr(S.WF, 'x', S.ihours)
+    wind_curve = getattr(S, 'WF_audio', S.WF)
+    knots = getattr(wind_curve, 'x', S.ihours)
     knots = np.unique(np.clip(np.r_[0.0, knots, S.duration_h], 0.0, S.duration_h))
     cuts = list(knots)
-    values = np.asarray(S.WF(knots), dtype=float)
+    values = np.asarray(wind_curve(knots), dtype=float)
     for left, right, wl, wr in zip(knots[:-1], knots[1:], values[:-1], values[1:]):
         if not (np.isfinite(wl) and np.isfinite(wr)):
             continue
@@ -3854,7 +3858,7 @@ def intensity_intervals(threshold):
         lo, hi = float(left), float(right)
         for _ in range(48):
             mid = (lo + hi) / 2.0
-            if (float(S.WF(mid)) >= threshold) == rising:
+            if (float(wind_curve(mid)) >= threshold) == rising:
                 hi = mid
             else:
                 lo = mid
@@ -3862,7 +3866,7 @@ def intensity_intervals(threshold):
     cuts = sorted(set(cuts))
     runs = []
     for left, right in zip(cuts[:-1], cuts[1:]):
-        wind = float(S.WF((left + right) / 2.0))
+        wind = float(wind_curve((left + right) / 2.0))
         if not np.isfinite(wind) or wind < threshold:
             continue
         if runs and runs[-1][1] == left:
@@ -3936,7 +3940,7 @@ def build_audio():
     for start, end in intensity_intervals(113.0):
         tile(t_of_hours(start), t_of_hours(end),
              sfx('sound/random/noice_category4.ogg'), 0.34 * 2 / 3)
-    # above 170 kt sustained (lowered)
+    # 170 kt and above, including observed threshold plateaus (lowered)
     for start, end in intensity_intervals(170.0):
         tile(t_of_hours(start), t_of_hours(end),
              sfx('sound/random/noice_170.ogg'), 0.42 * 2 / 3)

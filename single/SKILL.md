@@ -75,7 +75,9 @@ camera and paths are independent of static preview styling.
 Opening title is verbatim: `intro_title` overrides `title`; explicit empty strings hide it. The Chinese second line is generated as `<category> <name_cn>  <year>-<basin>`; existing `intro_line` supplies a fallback Chinese name, and explicit empty `intro_line` hides it. Title and second line fade in simultaneously at 0.9–1.7 s; intro lasts 3.3 s, with a 0.7 s map crossfade. No footer is drawn. Category uses TC-only peak wind when any TC exists; otherwise ST/SD/SS takes priority over EX, then disturbance. See the style specification for basin and strict 112/154/169 kt prefix thresholds. Missing titles fall back to hypoTC/CYCLONE. Choose hemisphere
 art from current latitude. TS/SS upgrade FX/audio trigger only when entering the
 respective level while strengthening, regardless of preceding type; SS FX are
-yellow-green. Sustained C4+/170 kt sounds stop during weaker intervals.
+yellow-green. Sustained C4+/170 kt sounds use effective source intensity knots,
+preserving threshold plateaus even when display easing reduces them to one apex;
+170 kt is inclusive. Sounds stop during weaker intervals.
 
 Use auto panorama to fit the full track between the side cards and below the top
 banner. The film ends with this panorama; there is no separate statistics page.
