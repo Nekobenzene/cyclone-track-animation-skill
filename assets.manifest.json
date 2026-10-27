@@ -1,8 +1,8 @@
 {
  "schema": 1,
- "generated": "2026-10-26T14:21:51Z",
+ "generated": "2026-10-27T00:39:00Z",
  "repo": "Nekobenzene/cyclone-track-animation-skill",
- "tag": "assets-v3",
+ "tag": "assets-v4",
  "url_template": "https://github.com/{repo}/releases/download/{tag}/{file}",
  "default_packs": [
   "map",
@@ -9203,12 +9203,12 @@
   },
   "exe": {
    "file": "exe-win64.zip",
-   "bytes": 209316666,
-   "sha256": "5931ffb4131475aa5d96c9d7ab019e207ee66f3bc9ec3f6dc6425638cfcccf5c",
+   "bytes": 209350393,
+   "sha256": "efc1dabdb1f1b595f153a6ecedd136a40beb5f00e3c9e9df67c2f0dfe2d443d1",
    "description": "打包好的 typhoon.exe，自带 Python 解释器",
    "default": false,
    "file_count": 121,
-   "uncompressed_bytes": 209447229,
+   "uncompressed_bytes": 209481172,
    "files": [
     {
      "path": "bin/typhoon/_internal/PIL/_avif.cp312-win_amd64.pyd",
@@ -9553,7 +9553,7 @@
     {
      "path": "bin/typhoon/_internal/base_library.zip",
      "bytes": 1333490,
-     "sha256": "fc5c86f5f726cff751ff1ee3edbd581ffd162e9e7cab1a26c7a4e36a9b72a5d0"
+     "sha256": "48e5dbeab79b796a32f9e79b5996cf7ba9eec0173f2918dde4233b7971edd196"
     },
     {
      "path": "bin/typhoon/_internal/charset_normalizer/cd.cp312-win_amd64.pyd",
@@ -9807,23 +9807,23 @@
     },
     {
      "path": "bin/typhoon/source_manifest.json",
-     "bytes": 1524,
-     "sha256": "37692119fb8c5fb4f776866f70199c37484c36d6bed2550121c832e39fca2d63"
+     "bytes": 1932,
+     "sha256": "8cdcee5da0a22a545f0e5feff29401ec50346e069a4076723f302b2dc67d64f3"
     },
     {
      "path": "bin/typhoon/typhoon.exe",
-     "bytes": 5773272,
-     "sha256": "cfa4e11fc41e1bd719c17ef19fd500ea844ddb5d6960d8285f40bd58280fe18a"
+     "bytes": 5806807,
+     "sha256": "0e14cc1cc05f9f4e8e110270f615f5e82be8548c1e648f044d3daf0fa9cc7115"
     }
    ],
-   "url": "https://github.com/Nekobenzene/cyclone-track-animation-skill/releases/download/assets-v3/exe-win64.zip"
+   "url": "https://github.com/Nekobenzene/cyclone-track-animation-skill/releases/download/assets-v4/exe-win64.zip"
   }
  },
  "totals": {
   "packs": 8,
   "file_count": 1941,
-  "uncompressed_bytes": 2483883385,
-  "zip_bytes": 2468600669,
+  "uncompressed_bytes": 2483917328,
+  "zip_bytes": 2468634396,
   "default_zip_bytes": 1480535754,
   "default_file_count": 1782
  }

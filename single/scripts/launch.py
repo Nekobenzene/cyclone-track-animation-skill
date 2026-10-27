@@ -72,26 +72,8 @@ def main(argv=None, renderer_module=None):
                'output':{'width':1920,'height':1080,'fps':120,
                          'video_mode':'track',
                          'mp4':project.name+'_1920x1080_120fps.mp4'}, 'data':{}}
-        # A source-only project needs a real peak for banner category/tint.
-        sys.path.insert(0, str(skill/'scripts'))
-        if renderer_module is None:
-            import typhoon_anim as renderer
-        else:
-            renderer = renderer_module
-        import numpy as np
-        initial = dict(cfg, paths=dict(cfg['paths'], storm=str(project), assets=str(assets)))
-        renderer._apply_config(initial)
-        renderer._bind_paths()
-        series = renderer.Series()
-        tc = [i for i, phase in enumerate(series.phase) if phase == 'TC']
-        candidates = tc or list(range(len(series.hours)))
-        index = max(candidates, key=lambda i: float(series.WF(series.hours[i])))
-        h = float(series.hours[index])
-        wind, pres = float(series.WF(h)), float(series.PF(h))
-        cfg['data']['peaks'] = [dict(h=h, lon=float(series.lon[index]),
-                                    lat=float(series.lat[index]), label='PEAK 1',
-                                    graph='P1 %.0f/%.0f' % (wind,pres),
-                                    summary='%.0f kt / %.0f hPa' % (wind,pres))]
+        # Recompute all local maxima from current tracks on every render.
+        cfg['data']['peaks'] = 'auto'
         with config.open('x',encoding='utf-8') as f:
             yaml.safe_dump(cfg,f,allow_unicode=True,sort_keys=False)
     if renderer_module is not None:

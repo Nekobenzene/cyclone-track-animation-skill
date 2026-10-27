@@ -14,6 +14,8 @@ project structure and the complete workflow, then only the mode-specific instruc
 | One cyclone animation | [single/SKILL.md](single/SKILL.md) | `typhoon.exe single <project> <command>` |
 | Whole-season plate and data cards | [season/SKILL.md](season/SKILL.md) | `typhoon.exe season-plate` / `season-cards` |
 | Static map, black or transparent preview; ACE heat; offline HTML | [references/preview.md](references/preview.md) | `typhoon.exe preview single|season|html <project>` |
+| VIS_CLEAN crop, background removal, feathering and screen clips | [references/vis-clean.md](references/vis-clean.md) | `typhoon.exe vis-clean tune|preview|export <project>` |
+| Direct cloud video overlay while rendering single | [references/cloud-video.md](references/cloud-video.md) | `typhoon.exe cloud-video configure|preview|probe <project>` |
 | Source edits, rebuilding and publishing | [PUBLISHING.md](PUBLISHING.md) | `typhoon.exe build-exe` / maintenance modes |
 
 The executable is `<skill>/bin/typhoon/typhoon.exe`. Source alternatives remain available.

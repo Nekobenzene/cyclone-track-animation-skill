@@ -9,7 +9,7 @@ def main():
     if not getattr(sys, 'frozen', False):
         sys.path[:0] = [str(root/'runtime/python'),str(root)]
     parser = argparse.ArgumentParser(description='Typhoon animation: bundled Windows runtime, editable source retained')
-    parser.add_argument('mode', choices=['single','single-config','season-plate','season-cards','season-overview','preview','preview-black','fetch-assets','pack-assets','publish-release','build-runtime','build-exe','check'])
+    parser.add_argument('mode', choices=['single','single-config','season-plate','season-cards','season-overview','preview','preview-black','vis-clean','cloud-video','fetch-assets','pack-assets','publish-release','build-runtime','build-exe','check'])
     args = parser.parse_args(sys.argv[1:2])
     rest = sys.argv[2:]
     if args.mode == 'single':
@@ -33,6 +33,12 @@ def main():
     elif args.mode == 'preview-black':
         from single.scripts import preview_black
         return preview_black.main(rest)
+    elif args.mode == 'vis-clean':
+        from scripts import vis_clean
+        return vis_clean.main(rest)
+    elif args.mode == 'cloud-video':
+        from scripts import cloud_video
+        return cloud_video.main(rest)
     elif args.mode in ('fetch-assets','pack-assets','publish-release','build-runtime','build-exe'):
         # Explicit imports ensure every production tool is included by PyInstaller.
         from tools import fetch_assets, pack_assets, publish_release, build_runtime
@@ -55,6 +61,7 @@ def main():
         with track_preview.Image.open(root/'assets/SMCY1.3/gui/ace_heat.png') as ramp:
             ramp.load()
         assert (root/'season/templates/ace_density_preview.html').is_file()
+        assert (root/'single/templates/vis_clean_tuner.html').is_file()
         for tool in ['ffmpeg','ffprobe']:
             subprocess.run([str(root/'runtime/bin'/(tool+'.exe')),'-version'],check=True,stdout=subprocess.DEVNULL)
         # Exercise renderer cache initialization and verify actual write access.

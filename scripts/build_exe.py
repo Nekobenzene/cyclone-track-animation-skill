@@ -25,7 +25,7 @@ def main():
                    '--collect-submodules','PIL','--hidden-import','yaml','--hidden-import','cv2',
                    str(root/'scripts/typhoon_app.py')]
         subprocess.run(command,check=True,env=env)
-    sources = sorted(p for folder in ('single/scripts','season/scripts','scripts','tools','season/templates') for p in (root/folder).glob('*') if p.suffix in ('.py','.html'))
+    sources = sorted(p for folder in ('single/scripts','season/scripts','scripts','tools','season/templates','single/templates') for p in (root/folder).glob('*') if p.suffix in ('.py','.html'))
     (root/'bin/typhoon/source_manifest.json').write_text(json.dumps({p.relative_to(root).as_posix():hashlib.sha256(p.read_bytes()).hexdigest() for p in sources},indent=2),encoding='utf-8')
     print('Built:',root/'bin/typhoon/typhoon.exe')
 

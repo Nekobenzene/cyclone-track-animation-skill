@@ -262,6 +262,15 @@ Izu Peninsula    20260921120000  138.90  34.60
 
 云图不属于最小输入；启用时按实际视频设置 `h0`、`step_h`、`segment1`、`segment2`、`resume_h` 等参数。具体字段见 [单气旋数据与配置说明](single/references/storm-pipeline.md)。
 
+VIS_CLEAN 原图可先用 `& $Exe vis-clean tune $SingleProject --background <路径视频帧>`
+生成离线调节页，裁切、去海蓝底并羽化，再用 `vis-clean export` 批量生成滤色素材。
+参数可保存复用；接入 single 时使用 `cloud.format: screen`，跳过二次裁切。
+操作和 UTC 时间映射见 [VIS_CLEAN 工具](references/vis-clean.md)。
+
+已有云图视频则使用[直接视频叠加脚本](references/cloud-video.md)：
+`cloud-video configure` 填首末 UTC 和裁切参数，single 在路径渲染时按需解码并叠加，
+无需网页、全段抽帧或处理后的中间云图视频。命令行 preview 生成融合检查 PNG。
+
 ## 3. single 制作流程
 
 ### 第一步：检查数据并建立项目配置
@@ -473,6 +482,8 @@ python "$SkillRoot\scripts\build_exe.py"
 | `single` / `single-config` | 单旋动画 |
 | `season-plate` / `season-cards` / `season-overview` | 全季底片、数据层和兼容预览 |
 | `preview` / `preview-black` | 独立 PNG/HTML 与黑底便捷入口 |
+| `vis-clean` | VIS_CLEAN 离线调节页、单帧预览及 UTC 云图素材导出 |
+| `cloud-video` | 命令行配置、融合检查与原视频信息；路径渲染时直接处理叠加 |
 | `fetch-assets` / `pack-assets` / `publish-release` | 安装、打包、发布 |
 | `build-runtime` / `build-exe` | 重建依赖与程序，需外部Python/pip |
 | `check` | 运行环境及关键资源自检 |

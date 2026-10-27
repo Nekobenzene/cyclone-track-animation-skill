@@ -74,7 +74,7 @@ def _apply_config(cfg):
     _CONFIG_DIR = getattr(cfg, 'directory', None)
     CFG = cfg or {}
     _S = CFG.get('storm', {})
-    _D = CFG.get('data', {})
+    _D = dict(CFG.get('data', {}) or {})
 
 # ----------------------------------------------------------------------------
 # paths (bound from the config)
@@ -92,6 +92,10 @@ OUTMP4 = POSTER = RAWM = WAV = ''
 def _bind_paths():
     global ROOT, SRC, ASSETS, BUILD, OUTDIR
     global TMP, ICOND, CLOUDD, FXD, OUTMP4, POSTER, RAWM, WAV, CACHE
+    global _NCLOUD, _CLOUD_VIDEO
+    if globals().get('_CLOUD_VIDEO') is not None: _CLOUD_VIDEO.close()
+    _CLOUD_VIDEO = None
+    _NCLOUD = None
     # the storm folder itself (paths.storm, or the legacy paths.workdir)
     config_dir = _CONFIG_DIR or os.getcwd()
     ROOT = os.path.abspath(os.path.join(config_dir,
@@ -1293,23 +1297,48 @@ def extract_fx():
         print('fx', name, len(os.listdir(d)))
 
 def extract_cloud():
+    global _NCLOUD
+    _NCLOUD = None
     if not CLOUD_FILE:
         print('cloud: none configured, skipping')
         return
+    if _CL.get('format') == 'vis-clean-video':
+        reader = _get_cloud_video()
+        print('cloud: direct video / %d source frames / no image extraction' % reader.count)
+        return
     if not os.path.isdir(CLOUDD):
         os.makedirs(CLOUDD, exist_ok=True)
-    if len(os.listdir(CLOUDD)) > 100:
-        return
+    source = os.path.abspath(os.path.join(SRC, CLOUD_FILE))
+    stat = os.stat(source)
+    fingerprint = dict(source=source, size=stat.st_size, mtime_ns=stat.st_mtime_ns,
+                       every=CLOUD_STEP_EVERY, crop=int(_CL.get('crop', 0) or 0),
+                       format=_CL.get('format', 'legacy'))
+    marker = os.path.join(CLOUDD, '_source.json')
+    frames = lambda: sorted(n for n in os.listdir(CLOUDD) if re.fullmatch(r'\d+\.jpg', n))
+    try:
+        with open(marker, encoding='utf-8') as f: cached = json.load(f)
+        if cached.get('source') == fingerprint and cached.get('count', 0) > 0 and frames() == [
+                '%04d.jpg' % i for i in range(cached['count'])]:
+            return
+    except (OSError, ValueError, TypeError):
+        pass
+    # Only remove numbered frames owned by this extraction operation.
+    if os.path.isfile(marker): os.remove(marker)
+    for name in frames(): os.remove(os.path.join(CLOUDD, name))
     vf = 'select=not(mod(n\\,%d))' % CLOUD_STEP_EVERY
     crop = int(_CL.get('crop', 0) or 0)
-    if crop:                       # a wide product only needs its centre here
+    if crop and _CL.get('format', 'legacy') != 'screen':
         vf += ',crop=%d:%d' % (crop, crop)
     subprocess.run(['ffmpeg', '-v', 'error', '-y', '-i',
-                    os.path.join(SRC, CLOUD_FILE),
+                    source,
                     '-vf', vf, '-fps_mode', 'passthrough',
                     '-q:v', '3', '-start_number', '0',
                     os.path.join(CLOUDD, '%04d.jpg')], check=True)
-    print('cloud', len(os.listdir(CLOUDD)))
+    count = len(frames())
+    if not count: raise ValueError('Cloud source produced no frames')
+    with open(marker, 'w', encoding='utf-8') as f:
+        json.dump({'source': fingerprint, 'count': count}, f, indent=2)
+    print('cloud', count)
 
 # cloud video: frame f -> hours since 09-08 18Z  (uniform except one 46 h gap)
 _CL = {}
@@ -1323,17 +1352,77 @@ def cloud_state(h):
     """returns (frame_index or None, available)"""
     if not CLOUD_FILE:
         return None, False
-    if h < CLOUD_H0 - 0.5:
+    direct = _CL.get('format') == 'vis-clean-video'
+    if h < CLOUD_H0 - (0.0 if _CL.get('format') in ('screen', 'vis-clean-video') else 0.5):
         return None, False
     if h <= CLOUD_HA:
-        return (h - CLOUD_H0) / CLOUD_STEP, True
-    if CLOUD_G1 <= CLOUD_G0:            # single continuous loop -> hold the last frame
+        return (CLOUD_F0 if direct else 0) + (h - CLOUD_H0) / CLOUD_STEP, True
+    if CLOUD_G1 <= CLOUD_G0:            # last observation is held only during its exit fade
         return CLOUD_F1, True
     if h < CLOUD_HB:
         return None, False
-    if h <= CLOUD_HEND + 1:
+    if h <= CLOUD_HEND + (0 if direct else 1):
         return CLOUD_G0 + (h - CLOUD_HB) / CLOUD_STEP, True
     return CLOUD_G1, True
+
+
+def cloud_exit_alpha(t):
+    """Fade after the last observation, measured in output-video seconds."""
+    if not CLOUD_FILE:
+        return 0.0
+    end_h = CLOUD_HEND if CLOUD_G1 > CLOUD_G0 else CLOUD_HA
+    end_t = t_of_hours(end_h)
+    duration = max(0.0, float(_CL.get('fade_out_seconds', 0.5)))
+    if t <= end_t:
+        return 1.0
+    return 1.0 - _ramp(t, end_t, end_t + duration) if duration else 0.0
+
+
+def derive_peaks(series):
+    """Every observed local wind maximum; plateaus count once, at lowest pressure.
+
+    TC phases are analysed separately so intervening non-tropical samples cannot
+    join two tropical episodes. No prominence filter removes small real cycles.
+    """
+    hours = np.asarray(series.ihours)
+    wind, pres = np.asarray(series.iwind), np.asarray(series.ipres)
+    phases = [series.phase[min(len(series.phase) - 1,
+              max(0, int(np.searchsorted(series.hours, h, side='right')) - 1))] for h in hours]
+    wanted = 'TC' if 'TC' in phases else None
+    selected = []
+    start = 0
+    while start < len(phases):
+        end = start + 1
+        while end < len(phases) and phases[end] == phases[start]:
+            end += 1
+        if wanted is None or phases[start] == wanted:
+            i = start
+            while i < end:
+                j = i + 1
+                while j < end and float(wind[j]) == float(wind[i]):
+                    j += 1
+                w = float(wind[i])
+                left = i == start or w > float(wind[i - 1])
+                right = j == end or w > float(wind[j])
+                if left and right and (i > start or j < end):
+                    selected.append(min(range(i, j), key=lambda k:
+                        (float(pres[k]), abs(k - (i + j - 1) / 2), k)))
+                i = j
+        start = end
+    if not selected:
+        candidates = [i for i, p in enumerate(phases) if wanted is None or p == wanted]
+        if candidates:
+            selected = [min(candidates, key=lambda i:
+                (-float(wind[i]), float(pres[i]), i))]
+    peaks = []
+    for n, i in enumerate(selected, 1):
+        h = float(hours[i])
+        w, p = float(wind[i]), float(pres[i])
+        peaks.append(dict(h=h, lon=float(np.interp(h, series.hours, series.lon)),
+            lat=float(np.interp(h, series.hours, series.lat)),
+            label='PEAK %d   %.0f kt / %.0f hPa' % (n, w, p),
+            graph='P%d %.0f/%.0f' % (n, w, p), summary='%.0f kt / %.0f hPa' % (w, p)))
+    return peaks
 
 # ----------------------------------------------------------------------------
 # panel geometry  (all fonts are 1.5x v4, panels grown to match)
@@ -1564,19 +1653,45 @@ def _build():
     """materialise every storm-specific table once the config is bound"""
     global S, KEY, DAMAGE, LANDFALLS, _CL, CLOUD_FILE, CLOUD_STEP_EVERY
     global CLOUD_H0, CLOUD_STEP, CLOUD_F0, CLOUD_F1, CLOUD_G0, CLOUD_G1
-    global CLOUD_HA, CLOUD_HB, CLOUD_HEND
+    global CLOUD_HA, CLOUD_HB, CLOUD_HEND, _NCLOUD, _CLOUD_VIDEO
+    if globals().get('_CLOUD_VIDEO') is not None: _CLOUD_VIDEO.close()
+    _CLOUD_VIDEO = None
+    _NCLOUD = None
     S = Series()
+    if CFG.get('data', {}).get('peaks', 'auto') == 'auto':
+        _D['peaks'] = derive_peaks(S)
     build_phases()          # KEY needs the phase map, so build it first
     KEY = build_key()
-    _CL = CFG.get('cloud', {}) or {}
+    _CL = dict(CFG.get('cloud', {}) or {})
+    if _CL.get('format', 'legacy') not in ('legacy', 'screen', 'vis-clean-video'):
+        raise ValueError('cloud.format must be legacy, screen or vis-clean-video')
+    if _CL.get('format') == 'vis-clean-video':
+        if _CL.get('start_utc') is not None or _CL.get('end_utc') is not None:
+            if not _CL.get('start_utc') or not _CL.get('end_utc'):
+                raise ValueError('Supply both cloud.start_utc and cloud.end_utc')
+            if any(k in _CL for k in ('h0','step_h','segment1','segment2','resume_h')):
+                raise ValueError('Choose UTC endpoints or manual cloud time segments')
+            from single.scripts.cloud_video import endpoint_timing
+            _CLOUD_VIDEO = _new_cloud_video()
+            try:
+                _CL.update(endpoint_timing(str(_CL['start_utc']),str(_CL['end_utc']),_CLOUD_VIDEO.count,S.t0))
+            except Exception:
+                _CLOUD_VIDEO.close(); _CLOUD_VIDEO = None
+                raise
+        for field in ('h0', 'step_h', 'segment1'):
+            if _CL.get(field) is None: raise ValueError('Direct cloud video requires cloud.' + field)
+        if not math.isfinite(float(_CL['h0'])) or not math.isfinite(float(_CL['step_h'])) or float(_CL['step_h']) <= 0:
+            raise ValueError('Direct cloud video needs finite h0 and positive step_h')
+        if int(_CL.get('extract_every', 1)) != 1 or _CL.get('crop', 0):
+            raise ValueError('Direct video uses extract_every: 1 and processing settings for crop')
     CLOUD_FILE = _CL.get('file', '')
-    CLOUD_STEP_EVERY = int(_CL.get('extract_every', 4))
+    CLOUD_STEP_EVERY = int(_CL.get('extract_every', 1 if _CL.get('format') == 'vis-clean-video' else 4))
     CLOUD_H0 = float(_CL.get('h0', 0.0))
     CLOUD_STEP = float(_CL.get('step_h', 2.5 / 60.0))
     c1 = _CL.get('segment1', [0, 0]); c2 = _CL.get('segment2', [0, 0])
     CLOUD_F0, CLOUD_F1 = int(c1[0]), int(c1[1])
     CLOUD_G0, CLOUD_G1 = int(c2[0]), int(c2[1])
-    CLOUD_HA = CLOUD_H0 + CLOUD_F1 * CLOUD_STEP
+    CLOUD_HA = CLOUD_H0 + (CLOUD_F1 - (CLOUD_F0 if _CL.get('format') == 'vis-clean-video' else 0)) * CLOUD_STEP
     CLOUD_HB = float(_CL.get('resume_h', 0.0))
     CLOUD_HEND = CLOUD_HB + (CLOUD_G1 - CLOUD_G0) * CLOUD_STEP
     # ---- Num.txt / hypo.txt (optional, sit beside the track files) ----
@@ -2265,16 +2380,51 @@ def cloud_mask(size):
 
 _CMASK = None
 _NCLOUD = None
+_CLOUD_VIDEO = None
+
+def _new_cloud_video():
+    from single.scripts.cloud_video import VideoCloud
+    processing = _CL.get('processing')
+    if _CL.get('processing_file'):
+        if processing is not None: raise ValueError('Choose cloud.processing or cloud.processing_file')
+        with open(os.path.join(SRC, _CL['processing_file']), encoding='utf-8-sig') as f:
+            processing = json.load(f)
+    return VideoCloud(os.path.join(SRC, _CL.get('file', CLOUD_FILE)), processing)
+
+def _get_cloud_video():
+    global _CLOUD_VIDEO
+    if _CLOUD_VIDEO is None:
+        reader = _new_cloud_video()
+        ranges = [(CLOUD_F0, CLOUD_F1)]
+        if CLOUD_G1 > CLOUD_G0: ranges.append((CLOUD_G0, CLOUD_G1))
+        if any(a < 0 or b < a or b >= reader.count for a, b in ranges):
+            reader.close()
+            raise ValueError('Cloud video segments lie outside the source frame count')
+        _CLOUD_VIDEO = reader
+    return _CLOUD_VIDEO
 def cloud_overlay(frame_idx, alpha):
     global _CMASK, _NCLOUD
     size = CLOUD_R * 2
+    if _CL.get('format') == 'vis-clean-video':
+        return _get_cloud_video().overlay(int(math.floor(frame_idx + 1e-9)), size, alpha)
     if _CMASK is None:
         _CMASK = cloud_mask(size)
     if _NCLOUD is None:
-        _NCLOUD = len(os.listdir(CLOUDD))
-    fi = int(round(frame_idx / float(CLOUD_STEP_EVERY)))
+        _NCLOUD = sum(bool(re.fullmatch(r'\d+\.jpg', n)) for n in os.listdir(CLOUDD))
+    if not _NCLOUD: raise ValueError('Cloud frames missing; run assets first')
+    fi = (int(math.floor(frame_idx / float(CLOUD_STEP_EVERY) + 1e-9))
+          if _CL.get('format') == 'screen' else int(round(frame_idx / float(CLOUD_STEP_EVERY))))
     fi = max(0, min(_NCLOUD - 1, fi))
-    g = Image.open(os.path.join(CLOUDD, '%04d.jpg' % fi)).convert('L')
+    path = os.path.join(CLOUDD, '%04d.jpg' % fi)
+    if _CL.get('format', 'legacy') == 'screen':
+        with Image.open(path) as im:
+            plate = im.convert('RGB').resize((size, size), Image.LANCZOS)
+        rgb = np.asarray(plate).copy()
+        rgb[rgb <= 2] = 0  # remove near-black codec residue at the baked edge
+        rgb = np.clip(rgb.astype(np.float32) * float(alpha), 0, 255).astype(np.uint8)
+        rgb[[0, -1], :, :] = 0; rgb[:, [0, -1], :] = 0
+        return Image.fromarray(rgb, 'RGB').convert('RGBA')
+    with Image.open(path) as im: g = im.convert('L')
     cx, cy = g.width // 2, g.height // 2
     half = 250                                   # drops the burned-in watermarks
     g = g.crop((cx - half, cy - half, cx + half, cy + half)).resize((size, size), Image.LANCZOS)
@@ -2893,7 +3043,7 @@ class R:
         hudlay = self._compose_hud(t)
 
         # cloud inset (screen blended, feathered -> no visible square, no caption)
-        ca = self.cloud_alpha[display_i]
+        ca = self.cloud_alpha[display_i] * cloud_exit_alpha(max(t, INTRO))
         if t > T_MAIN:
             ca *= max(0.0, 1.0 - _ramp(t, T_MAIN, T_MAIN + PULL * 0.8))
         if ca > 0.01:
@@ -3476,8 +3626,25 @@ def banner_line2():
         p = max(pks, key=lambda x: float(np.interp(float(x['h']), S.ihours, S.iwind)))
         best = '%.0f kt / %.0f hPa' % (np.interp(float(p['h']), S.ihours, S.iwind),
                                        np.interp(float(p['h']), S.ihours, S.ipres))
-    return ('PEAK %s      ACE %.2f x10^4 kt2      LOSS ~ %s      DEATHS %s'
-            % (best, S.ace_total, _c('banner.loss', 'n/a'), _c('banner.deaths', 'n/a')))
+    loss, deaths = damage_totals_label()
+    return ('PEAK %s      ACE %.2f x10^4 kt2      LOSS %s      DEATHS %s'
+            % (best, S.ace_total, _c('banner.loss', loss), _c('banner.deaths', deaths)))
+
+
+def damage_totals_label():
+    """DAMAGE already contains each ungrouped place or grouped total once."""
+    if not DAMAGE:
+        return 'n/a', 'n/a'
+    from decimal import Decimal
+    yuan = sum((Decimal(str(e.get('loss', '0'))) * Decimal('100000000')
+                for e in DAMAGE), Decimal(0))
+    if yuan >= Decimal('1000000000'):
+        loss = 'CNY %g bn' % (yuan / Decimal('1000000000'))
+    elif yuan >= Decimal('1000000'):
+        loss = 'CNY %g mn' % (yuan / Decimal('1000000'))
+    else:
+        loss = 'CNY %s' % format(yuan, ',.0f')
+    return loss, str(sum(int(e.get('dead', 0)) + int(e.get('lost', 0)) for e in DAMAGE))
 
 def intro_title():
     """Configured copy is verbatim; only a missing title gets a default."""

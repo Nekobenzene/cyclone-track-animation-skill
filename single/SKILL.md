@@ -64,6 +64,11 @@ camera and paths are independent of static preview styling.
   [style specification](references/storm-style-spec.md): timing, geometry and effects.
 - [Performance](references/rendering-performance.md): bounded caches, encoding,
   interval-based intensity sound and source-data rerenders.
+- [VIS_CLEAN processing](../references/vis-clean.md): offline crop/tone/feather tuner,
+  UTC-aligned export and `cloud.format: screen` without a second crop or mask.
+- [Direct cloud video](../references/cloud-video.md): compiled configuration/preview
+  scripts and `cloud.format: vis-clean-video` for on-demand processing during final
+  path rendering, with automatic alignment from first/last observation UTC.
 - [Extreme intensities](../references/extreme-intensity.md): palette to 500 kt,
   high-wind numeral/banner/card treatment and landfall size cap.
 
@@ -76,3 +81,12 @@ Use auto panorama to fit the full track between the side cards and below the top
 banner. The film ends with this panorama; there is no separate statistics page.
 Use bundled fonts and text-measurement helpers for Chinese/Latin mixed text.
 Inspect keyframes for readable text, card layout and event placement before a long run.
+For source-derived peaks, omit `data.peaks` or set it to `auto`: every local wind
+maximum is recomputed from the current effective intensity knots; a maximum plateau
+counts once, at its lowest-pressure fix. Explicit lists (including `[]`) remain overrides.
+Check old generated single-peak lists against all source cycles before rerendering.
+The panorama banner derives loss and deaths+missing totals from loaded damage events
+unless explicitly overridden by `banner.loss` / `banner.deaths` / `banner.line2`.
+Cloud footage fades out over `cloud.fade_out_seconds` (default 0.5 output seconds)
+after its final observation. Check the last cloud frame, fade midpoint and exit,
+plus the panorama banner and all peak cards before the production render.

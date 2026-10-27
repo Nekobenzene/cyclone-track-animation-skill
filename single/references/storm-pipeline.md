@@ -173,6 +173,9 @@ data:
   # 每个局部极大值都计入，而不只是最强的两个：一个有四次
   # 增强过程的风暴会得到四个条目。1-2 个峰值保持固定的
   # 两行摘要节奏；3 个及以上切换为每峰值一行的紧凑块。
+  # 省略 peaks 或设为 auto：每次按当前有效强度节点（含 reanalysis）计算所有局部极大值。
+  # 最大风速平台只计一次，取平台内最低气压时刻；不以显著度过滤微小但真实的增强周期。
+  # 显式列表仍是人工覆盖，[] 可禁用。旧启动器生成的单主峰列表应核对后改为 auto。
   peaks:
     - {h: 108.0, lon: 124.1, lat: 20.2, label: 'PEAK 1   165 kt / 890 hPa',
        color: [255,214,130], summary: '165 kt / 890 hPa - 09-13 06Z',
@@ -215,6 +218,7 @@ view:
 
 cloud:
   file: Meranti_2016_Himawari8_Infrared_B13.mp4
+  format: legacy                    # VIS_CLEAN 工具的成品用 screen，跳过再次裁切/调色/羽化
   extract_every: 4
   h0:     25.3333                    # 源帧 0 对应的数据小时
   step_h: 0.0416667                  # 每个源帧对应的数据小时
@@ -231,8 +235,9 @@ banner:                              # 打印在该素材上的文字，2 行，
   headline: 'WP172016   TYPHOON MERANTI   莫兰蒂'
   loss: CNY 11.91 bn
   deaths: '30'
-  # line2 默认是推导出来的——peak / ACE / loss / deaths 直接来自
-  # 数据，因此不会漂移。仅在需要整行覆盖时才设置它。
+  # 不设置 loss/deaths 时，自动累加已加载灾损事件（包括 damage.txt）；分组后只计一次。
+  # deaths 为死亡+失踪合计，源文件金额先按 damage_loss_unit 转换。
+  # line2 默认推导 peak / ACE / loss / deaths；显式 loss/deaths 优先，line2 覆盖整行。
   # line2: 'PEAK 175 kt / 880 hPa      ACE 29.06 x10^4 kt2  ...'
 
 audio:
@@ -266,6 +271,9 @@ credits:                             # 尾卡底部，每项一行
 ---
 
 ## 3. 测量卫星云图序列的时间映射
+
+VIS_CLEAN PNG 序列可用[专用处理工具](../../references/vis-clean.md)生成带 UTC 报告的
+滤色视频。使用报告中的 `cloud` 参数和 `format: screen`；抽帧缓存自动核对源文件。
 
 Digital Typhoon 的云图序列以**均匀**速率播放，但含有一个或多个
 **跳变**，因此要实测而不要假设。
