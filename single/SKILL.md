@@ -86,6 +86,8 @@ Inspect keyframes for readable text, card layout and event placement before a lo
 For source-derived peaks, omit `data.peaks` or set it to `auto`: every local wind
 maximum is recomputed from the current effective intensity knots; a maximum plateau
 counts once, at its lowest-pressure fix. Explicit lists (including `[]`) remain overrides.
+Peak statistics and panorama cards use source intensity knots, so display easing
+cannot reduce a reported plateau peak or alter its pressure.
 Check old generated single-peak lists against all source cycles before rerendering.
 The panorama banner derives loss and deaths+missing totals from loaded damage events
 unless explicitly overridden by `banner.loss` / `banner.deaths` / `banner.line2`.

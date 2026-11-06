@@ -1,5 +1,6 @@
 """Regressions for complete peak cycles, end-banner totals and cloud exit."""
 from pathlib import Path
+from datetime import datetime
 import sys
 from types import SimpleNamespace
 import unittest
@@ -49,6 +50,20 @@ class SingleFactsTests(unittest.TestCase):
             self.assertIn('LOSS CNY 49 mn      DEATHS 1', a.banner_line2())
         with patch.object(a,'DAMAGE',[]):
             self.assertEqual(a.damage_totals_label(), ('n/a','n/a'))
+
+    def test_peak_cards_use_source_values_when_display_easing_shifts_apex(self):
+        s=self.series([135,150,150,140], [934,925,928,940])
+        s.WF=lambda h:149.0
+        s.PF=lambda h:926.0
+        s.t0=datetime(2026,10,29)
+        with patch.object(a,'S',s), patch.object(a,'_D',{'peaks':[{'h':1}]}):
+            self.assertEqual(a.peak_values(1),(150,925))
+            self.assertEqual(a.peak_wind(),150)
+            r=object.__new__(a.R)
+            r.ef_mode=False
+            with patch.object(r,'_peaks',return_value=((1,130,10,'peak',(255,255,255)),)), \
+                 patch.object(a,'LANDFALLS',[]):
+                self.assertEqual(r._cards()[0][0]['l2'],'150 kt / 925 hPa')
 
     def test_cloud_exit_is_after_final_observation_in_output_seconds(self):
         with patch.multiple(a,CLOUD_FILE='source.mp4',CLOUD_G0=0,CLOUD_G1=0,

@@ -1078,12 +1078,18 @@ BANNER_BY_LEVEL = {'TD': 'Summary-N-TC-TD.mp4', 'TS': 'Summary-N-TC-TS.mp4',
                    'C5': 'Summary-N-TC-C5.mp4', 'C5+': 'Summary-N-TC-C5.mp4',
                    'C5++': 'Summary-N-TC-C5.mp4'}
 
+def peak_values(h):
+    """Statistics use source intensity, independent of display easing."""
+    return (float(np.interp(h, S.ihours, S.iwind)),
+            float(np.interp(h, S.ihours, S.ipres)))
+
+
 def peak_wind():
     """strongest configured peak, in knots"""
     pks = _D.get('peaks') or []
     if not pks or S is None:
         return 0.0
-    return max(float(S.WF(p['h'])) for p in pks)
+    return max(peak_values(p['h'])[0] for p in pks)
 
 def banner_asset():
     """the banner art matches the storm's peak category - a C2 storm must not
@@ -3397,8 +3403,7 @@ class R:
             return self._cardcache
         pk = []
         for i, (hpk, lo, la, _t, _c) in enumerate(self._peaks()):
-            w = float(S.WF(hpk))
-            p = float(S.PF(hpk))
+            w, p = peak_values(hpk)
             lvl = level_of(w, _phase_at(hpk))
             card_colour = single_card_colour(w, lvl)
             pk.append(dict(txt=self.badge_text(lvl, w), col=card_colour,
