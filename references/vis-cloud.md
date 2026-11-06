@@ -28,6 +28,8 @@
 `build/vis_cloud/recipe.json`、`processing.json`。`cloud_config.json` 提供项目 YAML
 可用的 `cloud` 块（`format: screen`），按实际路径起点推导 h0，不覆盖用户 YAML。
 路径渲染跳过重复裁切和二次羽化，末帧后默认 0.5 成片秒淡出。
+批量检查和逐观测处理使用四路有界并行，保持 UTC 顺序，最多预取八项；
+只处理时间网格实际引用的观测，缺测保持帧复用处理结果。
 
 先检查昼间、夜间、峰值和边缘融合，再把 `cloud_config.json` 合入项目 YAML，
 检查全部峰值、命名时刻、灾损和音效区间后渲染完整片。

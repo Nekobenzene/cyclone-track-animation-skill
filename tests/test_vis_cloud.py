@@ -10,6 +10,21 @@ from scripts import vis_cloud as v
 
 
 class VisCloudTests(unittest.TestCase):
+    def test_parallel_processing_preserves_order_with_bounded_lookahead(self):
+        ready=threading.Event()
+        pulled=[]
+        def source():
+            for i in range(20):pulled.append(i);yield i
+        def process(i):
+            if i==0:
+                if not ready.wait(5):raise RuntimeError('Other worker did not run')
+            if i==1:ready.set()
+            return i
+        values=v.vis_clean.bounded_map(process,source(),workers=2)
+        self.assertEqual(next(values),0)
+        self.assertLessEqual(len(pulled),4)
+        self.assertEqual([0]+list(values),list(range(20)))
+
     def test_listing_filters_year_parent_and_foreign_links(self):
         base='https://example.org/history/30W/VIS_clean/'
         html=''.join('<a href="'+p+'">x</a>' for p in [

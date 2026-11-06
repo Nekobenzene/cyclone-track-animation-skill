@@ -16,6 +16,9 @@ from pathlib import Path
 import re
 import subprocess
 import sys
+from collections import deque
+from concurrent.futures import ThreadPoolExecutor
+from itertools import islice
 
 ROOT=Path(os.environ.get('TYPHOON_SKILL_ROOT') or Path(__file__).resolve().parents[1])
 if not getattr(sys,'frozen',False): sys.path.insert(0,str(ROOT/'runtime/python'))
@@ -140,6 +143,16 @@ def inventory(source):
     if len({t for t,_ in frames})!=len(frames): raise ValueError('Duplicate UTC source timestamps')
     return frames
 
+def bounded_map(function,items,workers=4):
+    """Keep source order and at most two jobs per worker in flight."""
+    items=iter(items)
+    with ThreadPoolExecutor(max_workers=workers) as pool:
+        pending=deque(pool.submit(function,item) for item in islice(items,workers*2))
+        while pending:
+            result=pending.popleft().result()
+            yield result
+            for item in islice(items,1):pending.append(pool.submit(function,item))
+
 def tune(project,source,cfg,out,background):
     files=inventory(source)
     samples=[]
@@ -182,9 +195,10 @@ def export(project,source,cfg,args):
         if usable(entry[1]):
             frames.append(entry); break
         excluded.append(entry[1].name)
-    for t,path in candidates:
-        if usable(path): frames.append((t,path))
+    for checked,((t,path),valid) in enumerate(zip(candidates,bounded_map(usable,(p for _,p in candidates))),1):
+        if valid: frames.append((t,path))
         else: excluded.append(path.name)
+        if checked%100==0 or checked==len(candidates):print('Checked',checked,'/',len(candidates),flush=True)
     if not args.start and frames: start=frames[0][0]
     if not frames or frames[0][0]>start: raise ValueError('No valid source observation at or before start')
     end=min(end,frames[-1][0])
@@ -206,15 +220,19 @@ def export(project,source,cfg,args):
                         '-r',str(args.fps),'-i','-','-an','-c:v','libx264','-preset','fast','-crf','14',
                         '-pix_fmt','yuv420p','-movflags','+faststart',str(temporary)],stdin=subprocess.PIPE)
     times=[t for t,_ in frames]
+    slots=[bisect.bisect_right(times,start+timedelta(seconds=i*args.step_seconds))-1 for i in range(count)]
+    def prepare(j):
+        with Image.open(frames[j][1]) as im:rgba=process_frame(im,cfg,args.size)
+        return rgba,screen_plate(rgba).tobytes()
+    processed=bounded_map(prepare,dict.fromkeys(slots))
     cached=None; held=0; last=None
     try:
         for i in range(count):
             t=start+timedelta(seconds=i*args.step_seconds)
-            j=bisect.bisect_right(times,t)-1
+            j=slots[i]
             held+=t!=times[j]
             if j!=last:
-                with Image.open(frames[j][1]) as im: rgba=process_frame(im,cfg,args.size)
-                cached=screen_plate(rgba).tobytes(); last=j
+                rgba,cached=next(processed);last=j
             if args.png:
                 rgba.save(png/(f'{i:06d}_'+t.strftime('%Y%m%d%H%M%S%f')+'.png'))
             p.stdin.write(cached)
@@ -224,6 +242,8 @@ def export(project,source,cfg,args):
     except BaseException:
         if p.poll() is None: p.terminate(); p.wait()
         raise
+    finally:
+        processed.close()
     probe=json.loads(subprocess.check_output([ffprobe,'-v','error','-show_streams','-show_format','-of','json',str(temporary)]))
     video=next(s for s in probe['streams'] if s['codec_type']=='video')
     if int(video['nb_frames'])!=count: raise RuntimeError('Encoded frame count does not match UTC grid')
