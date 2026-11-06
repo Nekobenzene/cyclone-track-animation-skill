@@ -24,6 +24,12 @@ def main():
                    '--specpath',str(work),'--paths',str(root),'--paths',str(root/'runtime/python'),
                    '--collect-submodules','PIL','--hidden-import','yaml','--hidden-import','cv2',
                    str(root/'scripts/typhoon_app.py')]
+        # Some Python distributions patch ssl to load a companion PEM at import
+        # time. Preserve those files beside the frozen stdlib for verified HTTPS.
+        pem_files = json.loads(subprocess.check_output(python + ['-c',
+            'import ssl,pathlib,json; print(json.dumps([str(p) for p in pathlib.Path(ssl.__file__).parent.glob("*.pem")]))'], text=True))
+        for pem in pem_files:
+            command.extend(['--add-data', str(pem) + os.pathsep + '.'])
         subprocess.run(command,check=True,env=env)
     sources = sorted(p for folder in ('single/scripts','season/scripts','scripts','tools','season/templates','single/templates') for p in (root/folder).glob('*') if p.suffix in ('.py','.html'))
     (root/'bin/typhoon/source_manifest.json').write_text(json.dumps({p.relative_to(root).as_posix():hashlib.sha256(p.read_bytes()).hexdigest() for p in sources},indent=2),encoding='utf-8')

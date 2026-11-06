@@ -18,6 +18,8 @@ bin/typhoon/typhoon.exe fetch-assets --list
 
 用 Windows x64 CPython 3.12 构建，pip 临时安装固定版本 PyInstaller。
 所有生产入口编入一个 `bin/typhoon/`，共用 `_internal/`，不为每个脚本复制运行库。
+构建时同时收集 Python TLS 模块目录内的 PEM 配套文件，保持发行版的证书校验行为。
+发布联网组件前，除帮助和离线自检外，还需用编译版实际验证 HTTPS 请求。
 `source_manifest.json` 记录 single/season/scripts/tools 所有源码及 HTML 模板哈希。
 不要在该目录的 exe 运行时替换它。源码编辑后重新构建；外部素材和模板按清单同步。
 测试脚本不作为产品入口，备用 geo 工具保留在可选素材包中。
