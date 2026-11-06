@@ -8,7 +8,8 @@ from pathlib import Path
 from types import SimpleNamespace
 from urllib.parse import urljoin, urlparse, unquote
 from urllib.request import Request, urlopen
-import argparse, json, math, os, re, sys, time
+from urllib.error import HTTPError
+import argparse, json, math, os, re, sys, time, threading
 
 ROOT=Path(os.environ.get('TYPHOON_SKILL_ROOT') or Path(__file__).resolve().parents[1])
 if not getattr(sys,'frozen',False): sys.path[:0]=[str(ROOT),str(ROOT/'runtime/python')]
@@ -51,11 +52,13 @@ def valid_png(path):
     except (OSError,SyntaxError): return False
 
 
-def download_one(name,url,source,base,retries=3):
+def download_one(name,url,source,base,retries=3,cancel=None):
     target=source/name;part=source/(name+'.part')
     if target.is_file() and valid_png(target): return dict(file=name,cached=True)
     error=''
     for attempt in range(retries):
+        if cancel is not None and cancel.is_set():
+            return dict(file=name,error='Deferred after server rate limit',deferred=True)
         try:
             req=Request(url,headers={'User-Agent':'Mozilla/5.0','Referer':base})
             with urlopen(req,timeout=45) as response,part.open('wb') as dest:
@@ -63,6 +66,14 @@ def download_one(name,url,source,base,retries=3):
             if not valid_png(part): raise ValueError('Invalid PNG checksum or incomplete source')
             part.replace(target)
             return dict(file=name,cached=False)
+        except HTTPError as exc:
+            error=str(exc)
+            if exc.code==429:
+                if cancel is not None: cancel.set()
+                return dict(file=name,error=error,status=429,
+                            retry_after=exc.headers.get('Retry-After'),
+                            daily_traffic_limit=exc.headers.get('X-Daily-Traffic-Limit'))
+            if attempt+1<retries: time.sleep(min(2**attempt,4))
         except (OSError,ValueError) as exc:
             error=str(exc)
             if attempt+1<retries: time.sleep(min(2**attempt,4))
@@ -77,9 +88,9 @@ def fetch(project,base,year,workers):
     (build/'listing.html').write_text(html,encoding='utf-8')
     files=listing_files(html,base,year)
     write_json(build/'snapshot.json',{'url':base,'year':year,'files':files})
-    results=[]
+    results=[];cancel=threading.Event()
     with ThreadPoolExecutor(max_workers=workers) as pool:
-        futures=[pool.submit(download_one,name,url,source,base) for name,url in files]
+        futures=[pool.submit(download_one,name,url,source,base,cancel=cancel) for name,url in files]
         for future in as_completed(futures):
             results.append(future.result())
             if len(results)%50==0 or len(results)==len(files):
@@ -89,6 +100,7 @@ def fetch(project,base,year,workers):
     failures=[r for r in results if 'error' in r]
     report={'source':base,'year':year,'total':len(files),'valid':len(results)-len(failures),
             'rejected':failures,'files':sorted(results,key=lambda r:r['file'])}
+    report['server_limits']=[r for r in failures if r.get('status')==429]
     write_json(build/'download_report.json',report)
     if failures:
         raise RuntimeError('Download incomplete: inspect download_report.json; rerun fetch to retry')

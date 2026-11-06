@@ -1,7 +1,8 @@
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
-import io, json, sys, tempfile, unittest
+import io, json, sys, tempfile, unittest, threading
+from urllib.error import HTTPError
 ROOT=Path(__file__).resolve().parents[1]
 sys.path[:0]=[str(ROOT),str(ROOT/'runtime/python')]
 from PIL import Image,ImageDraw
@@ -46,6 +47,21 @@ class VisCloudTests(unittest.TestCase):
             self.assertEqual(config['format'],'screen');self.assertEqual(config['fade_out_seconds'],.5)
             self.assertEqual(config['h0'],12)
             self.assertTrue(Path(report['file']).is_file())
+
+    def test_daily_limit_stops_queued_requests_and_preserves_retry_headers(self):
+        with tempfile.TemporaryDirectory(dir=ROOT/'build') as temp:
+            cancel=threading.Event()
+            error=HTTPError('https://example.org/a',429,'Too Many Requests',
+                            {'Retry-After':'83481','X-Daily-Traffic-Limit':'10000000000'},None)
+            with patch.object(v,'urlopen',side_effect=error) as request:
+                result=v.download_one('a.png','https://example.org/a',Path(temp),'https://example.org/',cancel=cancel)
+                self.assertEqual(result['status'],429)
+                self.assertEqual(result['retry_after'],'83481')
+                self.assertEqual(result['daily_traffic_limit'],'10000000000')
+                self.assertTrue(cancel.is_set())
+                result=v.download_one('b.png','https://example.org/b',Path(temp),'https://example.org/',cancel=cancel)
+                self.assertTrue(result['deferred'])
+                self.assertEqual(request.call_count,1)
 
 
 if __name__=='__main__': unittest.main()
