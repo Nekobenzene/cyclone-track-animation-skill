@@ -1,5 +1,8 @@
 # 气旋路径动画 Skill 使用指南
 
+VIS 云图下载、处理与合成可使用编译组件 `typhoon.exe vis-cloud fetch|build|run <project>`，
+它输出 UTC 对齐的滤色视频和可接入 single 的配置片段，详见 [VIS 云图组件](references/vis-cloud.md)。
+
 这份 skill 将气旋路径和强度资料制作成 SMCY1.3 风格的地图动画，供使用者或具备文件、终端操作能力的各类 agent 使用。它包含两个制作模式：
 
 | 模式 | 用途 | 画面与产物 |

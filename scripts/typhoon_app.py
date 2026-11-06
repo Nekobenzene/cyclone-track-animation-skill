@@ -9,7 +9,7 @@ def main():
     if not getattr(sys, 'frozen', False):
         sys.path[:0] = [str(root/'runtime/python'),str(root)]
     parser = argparse.ArgumentParser(description='Typhoon animation: bundled Windows runtime, editable source retained')
-    parser.add_argument('mode', choices=['single','single-config','season-plate','season-cards','season-overview','preview','preview-black','vis-clean','cloud-video','fetch-assets','pack-assets','publish-release','build-runtime','build-exe','check'])
+    parser.add_argument('mode', choices=['single','single-config','season-plate','season-cards','season-overview','preview','preview-black','vis-clean','vis-cloud','cloud-video','fetch-assets','pack-assets','publish-release','build-runtime','build-exe','check'])
     args = parser.parse_args(sys.argv[1:2])
     rest = sys.argv[2:]
     if args.mode == 'single':
@@ -36,6 +36,9 @@ def main():
     elif args.mode == 'vis-clean':
         from scripts import vis_clean
         return vis_clean.main(rest)
+    elif args.mode == 'vis-cloud':
+        from scripts import vis_cloud
+        return vis_cloud.main(rest)
     elif args.mode == 'cloud-video':
         from scripts import cloud_video
         return cloud_video.main(rest)

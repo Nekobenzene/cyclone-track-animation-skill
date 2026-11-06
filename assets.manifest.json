@@ -1,8 +1,8 @@
 {
  "schema": 1,
- "generated": "2026-10-27T04:33:25Z",
+ "generated": "2026-11-06T16:06:28Z",
  "repo": "Nekobenzene/cyclone-track-animation-skill",
- "tag": "assets-v5",
+ "tag": "assets-v6",
  "url_template": "https://github.com/{repo}/releases/download/{tag}/{file}",
  "default_packs": [
   "map",
@@ -9203,12 +9203,12 @@
   },
   "exe": {
    "file": "exe-win64.zip",
-   "bytes": 209350554,
-   "sha256": "0638b811a11d3acdc95cea56a21e67403bcacb53defc423be612d90c3cf2a525",
+   "bytes": 209372982,
+   "sha256": "bef37286c3a74ceb566afbfcd22a91512638f31aa6e0c4558e8d2930aa8e0322",
    "description": "打包好的 typhoon.exe，自带 Python 解释器",
    "default": false,
    "file_count": 121,
-   "uncompressed_bytes": 209481330,
+   "uncompressed_bytes": 209503809,
    "files": [
     {
      "path": "bin/typhoon/_internal/PIL/_avif.cp312-win_amd64.pyd",
@@ -9263,72 +9263,72 @@
     {
      "path": "bin/typhoon/_internal/_asyncio.pyd",
      "bytes": 75056,
-     "sha256": "6f432946d14e23d6e2e008947b37301f6ce3c6b2adbfec89038474c03ac7ff68"
+     "sha256": "1901997bb8feb93af24f883100a9c0ff5e618da5ed1f4cad2a57c507c3e93108"
     },
     {
      "path": "bin/typhoon/_internal/_bz2.pyd",
      "bytes": 88880,
-     "sha256": "b958e1b9fb471a8e628c42c7f3599ea920d92bef0a76bb20056df9db5a42271a"
+     "sha256": "0a3fde0a080a517eda131e07d66d0408b3ea836a50c79bff69a555ecebae5e10"
     },
     {
      "path": "bin/typhoon/_internal/_ctypes.pyd",
      "bytes": 131888,
-     "sha256": "703904b5fb4f3a17d17244df016cbb71949acc52349170dd61fc227ba06429fe"
+     "sha256": "f86271e94eb3e2c83f4ad6042c0ad0de0134cbae4814b7e617ed27248754c669"
     },
     {
      "path": "bin/typhoon/_internal/_decimal.pyd",
      "bytes": 263984,
-     "sha256": "f7440b5e6b51c41dbf84a87d481e7fd5985fb993f90e998165b8afd8d58ded9d"
+     "sha256": "b013b8469ac1b85bf0a8637bbf7a2f50b4043d4a60f810e3c7367e4bc6eb34a1"
     },
     {
      "path": "bin/typhoon/_internal/_elementtree.pyd",
      "bytes": 137520,
-     "sha256": "40b5f0443c5baf06b0321ee5958624e64f4d9c84eedadcc050ff72b639fda1f5"
+     "sha256": "077d89e9066b82c8bd4d6770dab2998c06df44fc5d54728181ce5d88eeea8a64"
     },
     {
      "path": "bin/typhoon/_internal/_hashlib.pyd",
      "bytes": 70448,
-     "sha256": "2ce541e9af628cf41eec182a038da61df2c63fc4cd6a072d7e2fc48c42ebb910"
+     "sha256": "0e75e25857d30903f4d50435ce48e6dd923dbc0ea7813e86e82ed7a2c38c683c"
     },
     {
      "path": "bin/typhoon/_internal/_lzma.pyd",
      "bytes": 168240,
-     "sha256": "b2c78fff625722409d5bb902308bbb0548b2c379672eb73eade9a60d655f5d2a"
+     "sha256": "5b45aafc29c975f855f47502996856e3e3dd4aec992ed7d737aa4d39efb22d06"
     },
     {
      "path": "bin/typhoon/_internal/_multiprocessing.pyd",
      "bytes": 39728,
-     "sha256": "983571c7483aee8c96476510af34789e0fa2c741649d693d46e5452eab258df1"
+     "sha256": "e6d74a63ac47d4ddfc9de10490e9ccff2e72eaeaaa65ad7c114f8b8a54e467b6"
     },
     {
      "path": "bin/typhoon/_internal/_overlapped.pyd",
      "bytes": 59696,
-     "sha256": "02dfdd516bcaca1ae893f5bb1cef3935aad1343618922ce641d2d19d6aceed9b"
+     "sha256": "98a008f36d111779b07e5f197afec881a7bfec8799f4748630c98f81023492f5"
     },
     {
      "path": "bin/typhoon/_internal/_queue.pyd",
      "bytes": 36144,
-     "sha256": "429bb6af694d6eaa66a70c9e9c7b01bd80f8a7445d0ba1835821146f8626e7e0"
+     "sha256": "c6e3245172f50d0e4b796a07c62d2c166247bd4e05e910ab79a4de375b7bb830"
     },
     {
      "path": "bin/typhoon/_internal/_socket.pyd",
      "bytes": 87344,
-     "sha256": "e35983195cb32edc42ebdda2345dbe21b673e13bd8e23d0b24a90267a94302b2"
+     "sha256": "9a18dc15e77bfee1280e10367a94ea7e7cecb083387b6018a95f95ee81864d71"
     },
     {
      "path": "bin/typhoon/_internal/_ssl.pyd",
      "bytes": 180528,
-     "sha256": "37a2b51185b3be51a2d721bb3966d033d817570bb1b5a9a0a2d02ceb7a9e1ef3"
+     "sha256": "8078436e88407c3df3612bced96fdf1ff06553beaaa8f8617b92621377b87f30"
     },
     {
      "path": "bin/typhoon/_internal/_uuid.pyd",
      "bytes": 29488,
-     "sha256": "877676697288ee538d372e6d3627abb8fe53b84f916b2ab809752f7d5e8d8115"
+     "sha256": "2f1e87e0496a7047d6ccd887c257429b0023916df2aa99d57459daa8b42fb138"
     },
     {
      "path": "bin/typhoon/_internal/_wmi.pyd",
      "bytes": 41264,
-     "sha256": "3ef8b1e1947596289e4f6727a5f04cdc119c87c91ba09cf9ae4da735102815dd"
+     "sha256": "76185020fb0626fd31bd786a243f13d368f926576f873325b2497ef7cb768d00"
     },
     {
      "path": "bin/typhoon/_internal/api-ms-win-core-console-l1-1-0.dll",
@@ -9553,17 +9553,17 @@
     {
      "path": "bin/typhoon/_internal/base_library.zip",
      "bytes": 1333490,
-     "sha256": "5218073452c49025bed62963cf03b03607de13fc3bce58f7794cbaa9ae05dead"
+     "sha256": "cf40c1c442ee033ce4955d46dcf2dea05f4506c489bc9295d94a06777915fd64"
     },
     {
      "path": "bin/typhoon/_internal/charset_normalizer/cd.cp312-win_amd64.pyd",
      "bytes": 131376,
-     "sha256": "c7b4ecc48057a4ca1ef94cda84558132f5e15b987baae8a4554f0bb4b632f862"
+     "sha256": "286bf8bcc84bb29984d432f5baad40632153c819003db9d961bbea7468a7d6ab"
     },
     {
      "path": "bin/typhoon/_internal/charset_normalizer/md.cp312-win_amd64.pyd",
      "bytes": 224048,
-     "sha256": "d0d0750136854e5d00984e076ad3a540e0ab65cd4339f890aebf37c56b151ac1"
+     "sha256": "d2c4a983ee7668e6be06deb81cb9630e12c9b39316f548cae71c7b1dce3395c2"
     },
     {
      "path": "bin/typhoon/_internal/cv2/__init__.py",
@@ -9633,12 +9633,12 @@
     {
      "path": "bin/typhoon/_internal/libcrypto-3-x64.dll",
      "bytes": 8003376,
-     "sha256": "d3a631ba96ad212b64cb6e5635bace1f11567ae2c89ee60f2759c0505a98f3c1"
+     "sha256": "8d5a1636754a9529030166f34480f74f5347ba9a57d39d2f4420493140e25b14"
     },
     {
      "path": "bin/typhoon/_internal/libffi-8.dll",
      "bytes": 43824,
-     "sha256": "5115b853a4d789b8b9c9650c2ce678b71ac5c7504249baa52e64759e5dd5f0ee"
+     "sha256": "65955c185141a8a54f73cf617fd51e738661151985069f15516300e24008d706"
     },
     {
      "path": "bin/typhoon/_internal/libscipy_openblas64_-9e3e5a4229c1ca39f10dc82bba9e2b2b.dll",
@@ -9648,7 +9648,7 @@
     {
      "path": "bin/typhoon/_internal/libssl-3-x64.dll",
      "bytes": 1599280,
-     "sha256": "8f23a60b874e9a8bbe01c69b366a789afa2eec16d034850baed7847a5dd4cbed"
+     "sha256": "bf3563978fc87d07f62cd5e4820c09dba18b0a4f4f3c783c6dde5893edfebc7d"
     },
     {
      "path": "bin/typhoon/_internal/msvcp140-a4c2229bdc2a2a630acdc095b4d86008.dll",
@@ -9773,22 +9773,22 @@
     {
      "path": "bin/typhoon/_internal/pyexpat.pyd",
      "bytes": 226096,
-     "sha256": "9b972f13e8fbc3e3dd1f068db8c83ff2ee744b0b636942a4a02eab1a160fe8f6"
+     "sha256": "bdd8d555d070842b1ac825bcf1559c12de22ec327a45cf5cc91548b440585037"
     },
     {
      "path": "bin/typhoon/_internal/python3.dll",
      "bytes": 71984,
-     "sha256": "f9f5a6e43ecfad705cf7a3d21a6935914a17af9e7792cc617e286ad8a7a1c9db"
+     "sha256": "0f7c61c1be605f78f90b6b544d7dc6387916b338d13eb7f72fbe981d0dc6a7ec"
     },
     {
      "path": "bin/typhoon/_internal/python312.dll",
      "bytes": 6985520,
-     "sha256": "58afcb600bce8fbebec58970e83fc0b3e160cdb257ef90c900bd97a169f61645"
+     "sha256": "5a2191a79850eda0a57693b13a1e8b2e1ee11e20f7234b4f8538a2ff0f55a290"
     },
     {
      "path": "bin/typhoon/_internal/select.pyd",
      "bytes": 34608,
-     "sha256": "92d79f72d1fe9548c0c2d7b04c22a846a7d53cb3e5711a3f7f883a9d924602d2"
+     "sha256": "1ecea8ccd2dee1f77d9872de98f7ae8c281479548d279603d674c47f89a63c28"
     },
     {
      "path": "bin/typhoon/_internal/ucrtbase.dll",
@@ -9798,7 +9798,7 @@
     {
      "path": "bin/typhoon/_internal/unicodedata.pyd",
      "bytes": 1143600,
-     "sha256": "5d435389461a027806212effa095708c005fba6d233c57133dfec913555e210d"
+     "sha256": "b5f01a36415d955ae702ae169dfef2203885c51055f5dc36fe742066f38cc877"
     },
     {
      "path": "bin/typhoon/_internal/yaml/_yaml.cp312-win_amd64.pyd",
@@ -9807,23 +9807,23 @@
     },
     {
      "path": "bin/typhoon/source_manifest.json",
-     "bytes": 1932,
-     "sha256": "a51fd8aee236a337c704cbafcfec88f55de40dbb9d8d87a9ac5e42fd4dc7ee1c"
+     "bytes": 2027,
+     "sha256": "a7658d400a69159c026df2f9e1a6172e6e6f5615b17305576a6d638927b5d2ef"
     },
     {
      "path": "bin/typhoon/typhoon.exe",
-     "bytes": 5806965,
-     "sha256": "9eac17f09685794a3a0d342484cd87cdd9a8d6d7a5ea1b329a15f82cb59f2902"
+     "bytes": 5829349,
+     "sha256": "5ed015ff5dba15c8ee0733eb727158f71a5e487b531d562929332884408296a4"
     }
    ],
-   "url": "https://github.com/Nekobenzene/cyclone-track-animation-skill/releases/download/assets-v5/exe-win64.zip"
+   "url": "https://github.com/Nekobenzene/cyclone-track-animation-skill/releases/download/assets-v6/exe-win64.zip"
   }
  },
  "totals": {
   "packs": 8,
   "file_count": 1941,
-  "uncompressed_bytes": 2483917486,
-  "zip_bytes": 2468634557,
+  "uncompressed_bytes": 2483939965,
+  "zip_bytes": 2468656985,
   "default_zip_bytes": 1480535754,
   "default_file_count": 1782
  }
